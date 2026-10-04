@@ -61,6 +61,8 @@ async def get_my_swaps(
                 partner_profession=partner_prof.profession if partner_prof else "Professional",
                 i_teach_skill=i_teach_skill,
                 i_learn_skill=i_learn_skill,
+                i_teach_skill_id=s.skill_a_id if is_user_a else s.skill_b_id,
+                i_learn_skill_id=s.skill_b_id if is_user_a else s.skill_a_id,
                 status=s.status,
                 conversation_id=s.conversation.id if s.conversation else None,
                 started_at=s.started_at,

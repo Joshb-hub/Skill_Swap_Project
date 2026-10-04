@@ -177,7 +177,7 @@ export default function ProgressPage() {
                         </Badge>
                       </div>
                       <CardTitle className="text-xl font-bold text-slate-900">
-                        {prog.skill_name}
+                        <Link href={`/progress/${prog.id}`} className="hover:text-indigo-700">{prog.skill_name}</Link>
                       </CardTitle>
                       <p className="text-xs text-slate-500">
                         Exchanged with <span className="font-semibold text-slate-700">{currentSwap?.partner_name}</span>

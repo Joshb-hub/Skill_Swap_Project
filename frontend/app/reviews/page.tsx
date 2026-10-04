@@ -1,361 +1,166 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { AlertCircle, ArrowRight, ArrowRightLeft, Check, CheckCircle2, Clock3, Flag, MessageCircle, Pencil, Star, Users } from "lucide-react";
 import { Review, SkillSwap } from "@/types";
-import { reviewService, swapService, safetyService } from "@/services";
+import { reviewService, safetyService, swapService } from "@/services";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Avatar } from "@/components/ui/Avatar";
-import {
-  Star, MessageSquare, CheckCircle2, AlertCircle,
-  Flag, ArrowRightLeft
-} from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
-export default function ReviewsPage() {
-  const searchParams = useSearchParams();
-  const initialSwapId = searchParams.get("swap_id") || "";
-  const initialPartnerId = searchParams.get("partner_id") || "";
+type ReviewTab = "Received" | "Given" | "Pending" | "All Reviews";
+const reviewTabs: ReviewTab[] = ["Received", "Given", "Pending", "All Reviews"];
 
+export default function ReviewsPage() {
   const { isAuthenticated, user } = useAuth();
   const [swaps, setSwaps] = useState<SkillSwap[]>([]);
-  const [myReviews, setMyReviews] = useState<Review[]>([]);
-  const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(!!initialSwapId);
-
-  // Review Form state
-  const [swapId, setSwapId] = useState(initialSwapId);
-  const [revieweeId, setRevieweeId] = useState(initialPartnerId);
+  const [received, setReceived] = useState<Review[]>([]);
+  const [given, setGiven] = useState<Review[]>([]);
+  const [tab, setTab] = useState<ReviewTab>("Received");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [submitOpen, setSubmitOpen] = useState(false);
+  const [swapId, setSwapId] = useState("");
+  const [revieweeId, setRevieweeId] = useState("");
   const [commRating, setCommRating] = useState(5);
   const [teachRating, setTeachRating] = useState(5);
   const [helpRating, setHelpRating] = useState(5);
   const [overallRating, setOverallRating] = useState(5);
   const [comment, setComment] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
-
-  // Report modal state
-  const [isReportOpen, setIsReportOpen] = useState(false);
-  const [reportTargetId, setReportTargetId] = useState("");
+  const [reportOpen, setReportOpen] = useState(false);
   const [reportCategory, setReportCategory] = useState("Inappropriate Behavior");
   const [reportDesc, setReportDesc] = useState("");
 
-  const fetchData = async () => {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const initialSwapId = params.get("swap_id") || "";
+    const initialPartnerId = params.get("partner_id") || "";
+    if (initialSwapId) {
+      setSwapId(initialSwapId);
+      setRevieweeId(initialPartnerId);
+      setSubmitOpen(true);
+    }
+  }, []);
+
+  const loadData = async () => {
     if (!isAuthenticated || !user) return;
+    setLoading(true);
+    setError(null);
     try {
-      const [allSwaps, userRevs] = await Promise.all([
+      const [swapList, receivedList, givenList] = await Promise.all([
         swapService.getMySwaps(),
         reviewService.getUserReviews(user.id),
+        reviewService.getReviewsGiven(),
       ]);
-      setSwaps(allSwaps);
-      setMyReviews(userRevs);
-
-      if (!swapId && allSwaps.length > 0) {
-        setSwapId(allSwaps[0].id);
-        setRevieweeId(allSwaps[0].partner_id);
+      setSwaps(swapList);
+      setReceived(receivedList);
+      setGiven(givenList);
+      const alreadyReviewed = new Set(givenList.map((review) => review.swap_id));
+      const eligible = swapList.filter((swap) => swap.status === "Completed" && !alreadyReviewed.has(swap.id));
+      if (!swapId && eligible.length) {
+        setSwapId(eligible[0].id);
+        setRevieweeId(eligible[0].partner_id);
       }
-    } catch (err) {
-      console.error(err);
+      if (swapId && !success && !eligible.some((swap) => swap.id === swapId)) {
+        setSubmitOpen(false);
+        setError("Reviews can be submitted once per completed skill swap.");
+      }
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Could not load reviews.");
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    if (isAuthenticated) void loadData();
+    else setLoading(false);
   }, [isAuthenticated, user?.id]);
 
-  const handleSwapChange = (newSwapId: string) => {
-    setSwapId(newSwapId);
-    const selected = swaps.find((s) => s.id === newSwapId);
-    if (selected) {
-      setRevieweeId(selected.partner_id);
-    }
+  const reviewedSwapIds = useMemo(() => new Set(given.map((review) => review.swap_id)), [given]);
+  const pendingSwaps = useMemo(() => swaps.filter((swap) => swap.status === "Completed" && !reviewedSwapIds.has(swap.id)), [swaps, reviewedSwapIds]);
+  const swapById = useMemo(() => new Map(swaps.map((swap) => [swap.id, swap])), [swaps]);
+  const average = received.length ? received.reduce((total, review) => total + review.overall_rating, 0) / received.length : null;
+  const stars = [5, 4, 3, 2, 1].map((rating) => ({ rating, count: received.filter((review) => Math.round(review.overall_rating) === rating).length }));
+  const counts: Record<ReviewTab, number> = { Received: received.length, Given: given.length, Pending: pendingSwaps.length, "All Reviews": received.length + given.length };
+
+  const selectSwap = (nextSwapId: string) => {
+    setSwapId(nextSwapId);
+    setRevieweeId(swaps.find((swap) => swap.id === nextSwapId)?.partner_id || "");
   };
 
-  const handleSubmitReview = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!swapId || !revieweeId) {
-      setError("Please select an active or completed skill swap.");
-      return;
-    }
-
-    setIsSubmitting(true);
+  const submitReview = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!swapId || !revieweeId) return;
+    setSubmitting(true);
     setError(null);
-
     try {
-      await reviewService.submitReview({
-        swap_id: swapId,
-        reviewee_id: revieweeId,
-        communication_rating: commRating,
-        teaching_rating: teachRating,
-        helpfulness_rating: helpRating,
-        overall_rating: overallRating,
-        comment: comment.trim() || undefined,
-      });
+      await reviewService.submitReview({ swap_id: swapId, reviewee_id: revieweeId, communication_rating: commRating, teaching_rating: teachRating, helpfulness_rating: helpRating, overall_rating: overallRating, comment: comment.trim() || undefined });
       setSuccess(true);
-      setTimeout(() => {
-        setIsSubmitModalOpen(false);
-        setSuccess(false);
-        setComment("");
-        fetchData();
-      }, 1500);
-    } catch (err: any) {
-      setError(err.message || "Failed to submit review");
+      await loadData();
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Failed to submit review.");
     } finally {
-      setIsSubmitting(false);
+      setSubmitting(false);
     }
   };
 
-  const handleReportUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!reportTargetId || !reportDesc.trim()) return;
-
+  const submitReport = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!revieweeId || !reportDesc.trim()) return;
     try {
-      await safetyService.submitReport({
-        reported_id: reportTargetId,
-        category: reportCategory,
-        description: reportDesc.trim(),
-      });
-      alert("Report submitted to moderation team.");
-      setIsReportOpen(false);
+      await safetyService.submitReport({ reported_id: revieweeId, category: reportCategory, description: reportDesc.trim() });
+      setReportOpen(false);
       setReportDesc("");
-    } catch (err: any) {
-      alert(err.message || "Failed to submit report");
+    } catch (reportError) {
+      setError(reportError instanceof Error ? reportError.message : "Failed to submit report.");
     }
   };
 
-  const renderStarSelector = (val: number, setVal: (n: number) => void) => (
-    <div className="flex items-center space-x-1">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <button
-          key={star}
-          type="button"
-          onClick={() => setVal(star)}
-          className="p-1 focus:outline-none"
-        >
-          <Star
-            className={`w-5 h-5 ${
-              star <= val
-                ? "text-amber-500 fill-amber-500"
-                : "text-slate-200"
-            } hover:text-amber-400 transition-colors`}
-          />
-        </button>
-      ))}
-      <span className="ml-2 text-xs font-bold text-slate-700">{val}/5</span>
-    </div>
-  );
+  const openReview = (swap: SkillSwap) => {
+    setSwapId(swap.id);
+    setRevieweeId(swap.partner_id);
+    setSuccess(false);
+    setSubmitOpen(true);
+  };
+
+  const visibleReviews = tab === "Received" ? received : tab === "Given" ? given : [...received, ...given].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  if (!isAuthenticated) return <div className="reviews-dashboard-empty"><Star /><h1>Sign in to view reviews</h1><Link href="/login"><Button variant="primary">Sign in</Button></Link></div>;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
-            <Star className="w-7 h-7 text-amber-500 fill-amber-500" />
-            Reviews & Community Trust
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Build reciprocal trust. Review your partners after sessions and celebrate milestone achievements.
-          </p>
-        </div>
+    <main className="reviews-dashboard-page">
+      <div className="reviews-dashboard-layout">
+        <section className="reviews-dashboard-main">
+          <header className="reviews-dashboard-header"><div><h1>Reviews</h1><p>See what others are saying and share your own experience.</p></div><span className="reviews-header-note">Real people, real growth <span>♡</span></span></header>
+          <nav className="reviews-tabs" aria-label="Review categories">{reviewTabs.map((item) => <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>{item}<span>{counts[item]}</span></button>)}</nav>
+          {error && <div className="reviews-inline-error"><AlertCircle />{error}</div>}
+          <div className="reviews-section-title"><h2>{tab === "Pending" ? "Reviews to Give" : tab === "All Reviews" ? "All Reviews" : `Reviews You ${tab}`}</h2><p>{tab === "Received" ? "Feedback from people you’ve skill swapped with." : tab === "Given" ? "Feedback you have shared with your exchange partners." : tab === "Pending" ? "Completed swaps that still need your feedback." : "Your full review history in the community."}</p></div>
+          {loading ? <div className="reviews-loading" role="status">Loading reviews...</div> : tab === "Pending" ? pendingSwaps.length ? <div className="pending-review-list">{pendingSwaps.map((swap) => <article className="pending-review-card" key={swap.id}><Avatar src={swap.partner_avatar} name={swap.partner_name} size="md" /><div><strong>{swap.partner_name}</strong><p>{swap.i_teach_skill} ↔ {swap.i_learn_skill}</p></div><Button size="sm" variant="primary" onClick={() => openReview(swap)}><Pencil />Write a Review <ArrowRight /></Button></article>)}</div> : <div className="reviews-empty"><CheckCircle2 /><h3>You’re all caught up</h3><p>There are no completed swaps waiting for a review.</p></div> : visibleReviews.length ? <div className="review-card-list">{visibleReviews.map((review) => {
+            const swap = swapById.get(review.swap_id);
+            const isGiven = review.reviewer_id === user?.id;
+            const personName = isGiven ? swap?.partner_name || "Exchange partner" : review.reviewer_name;
+            const personAvatar = isGiven ? swap?.partner_avatar : review.reviewer_avatar;
+            return <article className="community-review-card" key={review.id}><div className="review-person-column"><Avatar src={personAvatar} name={personName} size="md" /><div><Link href={isGiven && swap ? `/profile/${swap.partner_username}` : `/profile/${swap?.partner_username || ""}`}>{personName}</Link><small>{formatDate(review.created_at)}</small></div></div><div className="review-main-copy"><div className="review-exchange-line"><span>{isGiven ? swap?.i_learn_skill || "Skill exchange" : swap?.i_teach_skill || "Skill exchange"}</span><ArrowRightLeft /><span>{isGiven ? swap?.i_teach_skill || "Skill exchange" : swap?.i_learn_skill || "Skill exchange"}</span></div><div className="review-rating-line"><span className="review-stars" aria-label={`${review.overall_rating} out of 5`}>{[1, 2, 3, 4, 5].map((star) => <Star key={star} className={star <= Math.round(review.overall_rating) ? "filled" : ""} />)}</span><strong>{review.overall_rating.toFixed(1)}</strong></div>{review.comment && <p className="review-comment">“{review.comment}”</p>}<div className="review-criteria"><span>Communication {review.communication_rating}/5</span><span>Teaching {review.teaching_rating}/5</span><span>Preparedness {review.helpfulness_rating}/5</span></div></div><div className="review-card-side"><span>{formatDate(review.created_at)}</span>{swap && <Link href={`/profile/${swap.partner_username}`}>View Profile</Link>}</div></article>;
+          })}</div> : <div className="reviews-empty"><Star /><h3>No {tab.toLowerCase()} reviews yet</h3><p>{tab === "Received" ? "Reviews from completed exchanges will appear here." : "After a completed swap, your submitted reviews will appear here."}</p></div>}
+        </section>
 
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={() => setIsSubmitModalOpen(true)}
-          disabled={swaps.length === 0}
-        >
-          <Star className="w-3.5 h-3.5 mr-1.5" />
-          Leave a Review
-        </Button>
+        <aside className="reviews-dashboard-aside">
+          <section className="review-summary-card"><h2><Star />Your Review Summary</h2><div className="review-summary-top"><div><strong>{average === null ? "—" : `${average.toFixed(1)} / 5`}</strong><span>Average rating</span></div><div><span><Users /><b>{received.length}</b>Reviews received</span><span><MessageCircle /><b>{given.length}</b>Reviews given</span></div></div><h3>Rating Breakdown</h3><div className="review-rating-breakdown">{stars.map(({ rating, count }) => <div key={rating}><span>{rating} star{rating === 1 ? "" : "s"}</span><i><b style={{ width: received.length ? `${(count / received.length) * 100}%` : "0%" }} /></i><strong>{received.length ? Math.round((count / received.length) * 100) : 0}%</strong></div>)}</div></section>
+          <section className="pending-review-summary"><div><Clock3 /><span><strong>{pendingSwaps.length}</strong><small>Review{pendingSwaps.length === 1 ? "" : "s"} to give</small></span></div>{pendingSwaps[0] && <button onClick={() => openReview(pendingSwaps[0])}>Write a Review <ArrowRight /></button>}</section>
+          <section className="share-review-card"><div><Pencil /><span><strong>Share your experience</strong><small>Help others by leaving feedback after a session.</small></span></div><button onClick={() => pendingSwaps[0] && openReview(pendingSwaps[0])} disabled={!pendingSwaps.length}>Write a Review <ArrowRight /></button></section>
+          <div className="reviews-kind-words"><span>Kind words create brighter learners</span><i /><i /><i /></div>
+          <p className="reviews-aside-caption">A supportive community for a better tomorrow.</p>
+        </aside>
       </div>
 
-      {/* Reviews on Current User */}
-      <Card className="border-slate-200 shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base">Reviews You Received</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {myReviews.length === 0 ? (
-            <p className="text-xs text-slate-400 italic py-8 text-center">
-              You haven't received any reviews yet. Complete skill swaps and mentor peers to earn feedback!
-            </p>
-          ) : (
-            myReviews.map((rev) => (
-              <div key={rev.id} className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <Avatar src={rev.reviewer_avatar} name={rev.reviewer_name} size="md" />
-                    <div>
-                      <p className="text-xs font-bold text-slate-900">{rev.reviewer_name}</p>
-                      <p className="text-[10px] text-slate-400">{formatDate(rev.created_at)}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center text-amber-500 text-sm font-bold">
-                    <Star className="w-4 h-4 fill-amber-500 mr-1" />
-                    <span>{rev.overall_rating}</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 text-[11px] text-slate-500 py-1">
-                  <span>Communication: {rev.communication_rating}/5</span>
-                  <span>Teaching: {rev.teaching_rating}/5</span>
-                  <span>Helpfulness: {rev.helpfulness_rating}/5</span>
-                </div>
-
-                {rev.comment && <p className="text-xs text-slate-700 leading-relaxed italic">"{rev.comment}"</p>}
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Leave Review Modal */}
-      {isSubmitModalOpen && (
-        <Modal
-          isOpen={isSubmitModalOpen}
-          onClose={() => setIsSubmitModalOpen(false)}
-          title="Review Your Skill Exchange Partner"
-          description="Rate your mentor or learner to help our community grow safely."
-        >
-          {success ? (
-            <div className="py-6 text-center space-y-3">
-              <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto" />
-              <h4 className="text-base font-bold text-slate-900">Review Submitted!</h4>
-              <p className="text-xs text-slate-500">Thank you for contributing to community trust.</p>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmitReview} className="space-y-4">
-              {error && (
-                <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-700">
-                  {error}
-                </div>
-              )}
-
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-slate-700">Select Skill Swap</label>
-                <select
-                  value={swapId}
-                  onChange={(e) => handleSwapChange(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  required
-                >
-                  {swaps.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      With {s.partner_name} ({s.i_teach_skill} ↔ {s.i_learn_skill})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Rating criteria */}
-              <div className="space-y-3 pt-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-slate-700">Overall Rating</span>
-                  {renderStarSelector(overallRating, setOverallRating)}
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-slate-700">Communication</span>
-                  {renderStarSelector(commRating, setCommRating)}
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-slate-700">Teaching Quality</span>
-                  {renderStarSelector(teachRating, setTeachRating)}
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-slate-700">Helpfulness</span>
-                  {renderStarSelector(helpRating, setHelpRating)}
-                </div>
-              </div>
-
-              {/* Comment */}
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-slate-700">Written Feedback</label>
-                <textarea
-                  rows={3}
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  placeholder="What went well? How was the lesson structure? Share encouraging notes..."
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div className="pt-2 flex justify-between items-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setReportTargetId(revieweeId);
-                    setIsReportOpen(true);
-                  }}
-                  className="text-xs text-slate-400 hover:text-rose-600 flex items-center gap-1"
-                >
-                  <Flag className="w-3.5 h-3.5" />
-                  <span>Report Issue</span>
-                </button>
-
-                <div className="flex space-x-2">
-                  <Button type="button" variant="outline" size="sm" onClick={() => setIsSubmitModalOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" variant="primary" size="sm" isLoading={isSubmitting}>
-                    Submit Review
-                  </Button>
-                </div>
-              </div>
-            </form>
-          )}
-        </Modal>
-      )}
-
-      {/* Safety Report Modal */}
-      {isReportOpen && (
-        <Modal
-          isOpen={isReportOpen}
-          onClose={() => setIsReportOpen(false)}
-          title="Submit User Report"
-          description="Reports are reviewed confidentially by our trust & safety team."
-        >
-          <form onSubmit={handleReportUser} className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-slate-700">Category</label>
-              <select
-                value={reportCategory}
-                onChange={(e) => setReportCategory(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900"
-              >
-                <option value="Inappropriate Behavior">Inappropriate Behavior</option>
-                <option value="Spam or Scam">Spam or Scam</option>
-                <option value="Harassment">Harassment</option>
-                <option value="Repeated No-Show">Repeated No-Show</option>
-                <option value="Inaccurate Skill Representation">Inaccurate Skill Representation</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-slate-700">Incident Details</label>
-              <textarea
-                rows={3}
-                required
-                value={reportDesc}
-                onChange={(e) => setReportDesc(e.target.value)}
-                placeholder="Describe what occurred with as much context as possible..."
-                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900"
-              />
-            </div>
-            <div className="pt-2 flex justify-end space-x-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => setIsReportOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" variant="danger" size="sm">
-                Submit Report
-              </Button>
-            </div>
-          </form>
-        </Modal>
-      )}
-    </div>
+      {submitOpen && <Modal isOpen={submitOpen} onClose={() => { setSubmitOpen(false); setSuccess(false); }} title="Review your skill exchange partner" description="Rate your experience to help the community build trust.">{success ? <div className="review-submit-success"><CheckCircle2 /><h3>Review submitted</h3><p>Thanks for helping your community grow.</p><Button variant="primary" size="sm" onClick={() => { setSubmitOpen(false); setSuccess(false); }}>Done</Button></div> : <form className="review-submit-form" onSubmit={submitReview}>{error && <p className="reviews-inline-error"><AlertCircle />{error}</p>}<label>Select completed swap<select value={swapId} onChange={(event) => { const selected = swaps.find((item) => item.id === event.target.value); setSwapId(event.target.value); setRevieweeId(selected?.partner_id || ""); }} required>{pendingSwaps.map((swap) => <option key={swap.id} value={swap.id}>With {swap.partner_name} ({swap.i_teach_skill} ↔ {swap.i_learn_skill})</option>)}</select></label>{[["Overall rating", overallRating, setOverallRating], ["Communication", commRating, setCommRating], ["Teaching quality", teachRating, setTeachRating], ["Helpfulness", helpRating, setHelpRating]].map(([label, value, setter]) => <div className="review-rating-input" key={label as string}><span>{label as string}</span><div>{[1, 2, 3, 4, 5].map((rating) => <button key={rating} type="button" aria-label={`${label} ${rating} stars`} onClick={() => (setter as (rating: number) => void)(rating)}><Star className={rating <= (value as number) ? "filled" : ""} /></button>)}</div></div>)}<label>Written feedback<textarea rows={3} maxLength={1000} value={comment} onChange={(event) => setComment(event.target.value)} placeholder="What went well? Share helpful, constructive feedback." /></label><footer><button type="button" className="review-report-link" onClick={() => setReportOpen(true)}><Flag />Report issue</button><Button type="submit" variant="primary" size="sm" isLoading={submitting} disabled={!pendingSwaps.length}>Submit Review</Button></footer></form>}</Modal>}
+      {reportOpen && <Modal isOpen={reportOpen} onClose={() => setReportOpen(false)} title="Submit user report" description="Reports are reviewed confidentially by the trust and safety team."><form className="review-submit-form" onSubmit={submitReport}><label>Category<select value={reportCategory} onChange={(event) => setReportCategory(event.target.value)}><option>Inappropriate Behavior</option><option>Spam or Scam</option><option>Harassment</option><option>Repeated No-Show</option><option>Inaccurate Skill Representation</option><option>Other</option></select></label><label>Incident details<textarea rows={4} required value={reportDesc} onChange={(event) => setReportDesc(event.target.value)} /></label><footer><Button type="button" variant="outline" size="sm" onClick={() => setReportOpen(false)}>Cancel</Button><Button type="submit" variant="primary" size="sm">Submit report</Button></footer></form></Modal>}
+    </main>
   );
 }

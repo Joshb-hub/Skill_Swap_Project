@@ -4,7 +4,7 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
-from app.models import User, Profile, UserSkill, Review
+from app.models import User, Profile, UserSkill, Review, Skill
 from app.schemas import ProfilePublicResponse, ProfileDetailResponse, ProfileUpdate, UserSkillResponse
 from app.api.dependencies.auth import get_current_user, get_optional_user
 from app.services.privacy_service import has_accepted_swap_between, get_visible_contact_info
@@ -23,7 +23,7 @@ async def get_profile_by_username(
         .where(User.username == username)
         .options(
             selectinload(User.profile),
-            selectinload(User.skills).selectinload(UserSkill.skill)
+            selectinload(User.skills).selectinload(UserSkill.skill).selectinload(Skill.category)
         )
     )
     res = await db.execute(stmt)

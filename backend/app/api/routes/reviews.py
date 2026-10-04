@@ -113,3 +113,37 @@ async def get_user_reviews(
         )
         for r in reviews
     ]
+
+
+@router.get("/given", response_model=List[ReviewResponse])
+async def get_reviews_given_by_current_user(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = (
+        select(Review)
+        .where(Review.reviewer_id == current_user.id)
+        .order_by(Review.created_at.desc())
+    )
+    res = await db.execute(stmt)
+    reviews = res.scalars().all()
+
+    reviewer_name = current_user.profile.full_name if current_user.profile else current_user.username
+    reviewer_avatar = current_user.profile.avatar_url if current_user.profile else None
+    return [
+        ReviewResponse(
+            id=review.id,
+            swap_id=review.swap_id,
+            reviewer_id=review.reviewer_id,
+            reviewer_name=reviewer_name,
+            reviewer_avatar=reviewer_avatar,
+            reviewee_id=review.reviewee_id,
+            communication_rating=review.communication_rating,
+            teaching_rating=review.teaching_rating,
+            helpfulness_rating=review.helpfulness_rating,
+            overall_rating=review.overall_rating,
+            comment=review.comment,
+            created_at=review.created_at
+        )
+        for review in reviews
+    ]

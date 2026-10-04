@@ -14,6 +14,52 @@ from app.api.dependencies.auth import get_current_user
 router = APIRouter(prefix="/progress", tags=["Learning Progress"])
 
 
+@router.get("/record/{progress_id}", response_model=LearningProgressResponse)
+async def get_progress_record(
+    progress_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = (
+        select(LearningProgress)
+        .where(LearningProgress.id == progress_id)
+        .options(
+            selectinload(LearningProgress.skill),
+            selectinload(LearningProgress.milestones),
+            selectinload(LearningProgress.swap),
+        )
+    )
+    progress = (await db.execute(stmt)).scalar_one_or_none()
+    if not progress:
+        raise HTTPException(status_code=404, detail="Progress record not found")
+    if progress.swap.user_a_id != current_user.id and progress.swap.user_b_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Unauthorized to view this progress record")
+
+    return LearningProgressResponse(
+        id=progress.id,
+        swap_id=progress.swap_id,
+        user_id=progress.user_id,
+        skill_id=progress.skill_id,
+        skill_name=progress.skill.name if progress.skill else "Skill",
+        current_level=progress.current_level,
+        target_level=progress.target_level,
+        progress_percentage=progress.progress_percentage,
+        total_sessions=progress.total_sessions,
+        completed_sessions=progress.completed_sessions,
+        milestones=[
+            MilestoneResponse(
+                id=milestone.id,
+                progress_id=milestone.progress_id,
+                title=milestone.title,
+                description=milestone.description,
+                status=milestone.status,
+                order=milestone.order,
+            )
+            for milestone in sorted(progress.milestones, key=lambda item: item.order)
+        ],
+    )
+
+
 @router.get("/swap/{swap_id}", response_model=List[LearningProgressResponse])
 async def get_swap_progress(
     swap_id: str,

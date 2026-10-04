@@ -12,6 +12,7 @@ from app.core.database import get_db
 from app.models import Conversation, Message, User, MessageType
 from app.schemas import MessageResponse, MessageCreate
 from app.api.dependencies.auth import get_current_user
+from app.websocket.connection_manager import manager
 
 router = APIRouter(prefix="/messages", tags=["Messages"])
 
@@ -118,7 +119,7 @@ async def upload_chat_attachment(
     await db.refresh(new_msg)
 
     sender_prof = current_user.profile
-    return MessageResponse(
+    response = MessageResponse(
         id=new_msg.id,
         conversation_id=new_msg.conversation_id,
         sender_id=current_user.id,
@@ -131,3 +132,8 @@ async def upload_chat_attachment(
         read_at=None,
         created_at=new_msg.created_at
     )
+    await manager.broadcast_to_room(conversation_id, {
+        "type": "message",
+        "message": response.model_dump(mode="json"),
+    })
+    return response

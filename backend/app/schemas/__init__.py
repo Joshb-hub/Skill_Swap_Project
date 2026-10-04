@@ -279,6 +279,8 @@ class SkillSwapResponse(BaseModel):
     partner_profession: str
     i_teach_skill: str
     i_learn_skill: str
+    i_teach_skill_id: str
+    i_learn_skill_id: str
     status: SwapStatus
     conversation_id: Optional[str] = None
     started_at: datetime

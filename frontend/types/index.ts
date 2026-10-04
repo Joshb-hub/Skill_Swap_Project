@@ -110,6 +110,8 @@ export interface SkillSwap {
   partner_profession: string;
   i_teach_skill: string;
   i_learn_skill: string;
+  i_teach_skill_id: string;
+  i_learn_skill_id: string;
   status: SwapStatus;
   conversation_id?: string;
   started_at: string;

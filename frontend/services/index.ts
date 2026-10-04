@@ -143,6 +143,9 @@ export const chatService = {
 };
 
 export const progressService = {
+  async getProgressRecord(progressId: string): Promise<LearningProgress> {
+    return apiClient.get<LearningProgress>(`/progress/record/${progressId}`);
+  },
   async getSwapProgress(swapId: string): Promise<LearningProgress[]> {
     return apiClient.get<LearningProgress[]>(`/progress/swap/${swapId}`);
   },
@@ -195,6 +198,9 @@ export const reviewService = {
   async getUserReviews(userId: string): Promise<Review[]> {
     return apiClient.get<Review[]>(`/reviews/user/${userId}`);
   },
+  async getReviewsGiven(): Promise<Review[]> {
+    return apiClient.get<Review[]>("/reviews/given");
+  },
 };
 
 export const notificationService = {
@@ -210,6 +216,9 @@ export const notificationService = {
 };
 
 export const safetyService = {
+  async changePassword(data: { current_password: string; new_password: string }): Promise<void> {
+    return apiClient.post("/settings/change-password", data);
+  },
   async blockUser(blockedId: string): Promise<void> {
     return apiClient.post("/reports/block", { blocked_id: blockedId });
   },

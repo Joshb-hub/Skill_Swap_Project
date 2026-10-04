@@ -1,378 +1,142 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { ArrowLeft, ArrowRight, ArrowRightLeft, CalendarDays, Check, CheckCircle2, Clock3, MapPin, Plus, RefreshCw, Sparkles, Users, Video, X, XCircle } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { Avatar } from "@/components/ui/Avatar";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { LearningSession, SkillSwap } from "@/types";
 import { sessionService, swapService } from "@/services";
-import { useAuth } from "@/hooks/useAuth";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Modal } from "@/components/ui/Modal";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
-import {
-  Calendar, Clock, Video, Plus, CheckCircle2,
-  XCircle, AlertCircle, RefreshCw, ArrowRightLeft
-} from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
+
+type SessionTab = "Upcoming" | "Past" | "Cancelled";
+const sessionTabs: SessionTab[] = ["Upcoming", "Past", "Cancelled"];
+const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
 export default function SessionsPage() {
   const searchParams = useSearchParams();
   const swapIdParam = searchParams.get("swap_id") || "";
-
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [sessions, setSessions] = useState<LearningSession[]>([]);
   const [swaps, setSwaps] = useState<SkillSwap[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState<boolean>(false);
+  const [tab, setTab] = useState<SessionTab>("Upcoming");
+  const [selectedDate, setSelectedDate] = useState("");
+  const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [rescheduleId, setRescheduleId] = useState<string | null>(null);
+  const [rescheduleValue, setRescheduleValue] = useState("");
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  // New session state
-  const [selectedSwapId, setSelectedSwapId] = useState<string>(swapIdParam);
-  const [sessionTitle, setSessionTitle] = useState<string>("");
-  const [sessionDateTime, setSessionDateTime] = useState<string>("");
-  const [durationMinutes, setDurationMinutes] = useState<number>(60);
-  const [meetingLink, setMeetingLink] = useState<string>("");
-  const [notes, setNotes] = useState<string>("");
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [modalError, setModalError] = useState<string | null>(null);
-
-  const fetchSessionsAndSwaps = async () => {
-    setIsLoading(true);
+  const loadData = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      const [sessList, swapList] = await Promise.all([
-        sessionService.getSessions(selectedSwapId || undefined),
-        swapService.getMySwaps(),
-      ]);
-      setSessions(sessList);
+      const [sessionList, swapList] = await Promise.all([sessionService.getSessions(), swapService.getMySwaps()]);
+      setSessions(sessionList);
       setSwaps(swapList);
-      if (!selectedSwapId && swapList.length > 0) {
-        setSelectedSwapId(swapList[0].id);
-      }
-    } catch (err) {
-      console.error("Failed to load sessions:", err);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Could not load sessions.");
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchSessionsAndSwaps();
-    } else {
-      setIsLoading(false);
-    }
-  }, [isAuthenticated, selectedSwapId]);
+    if (isAuthenticated) void loadData();
+    else setLoading(false);
+  }, [isAuthenticated]);
 
-  const handleCreateSession = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedSwapId || !sessionTitle || !sessionDateTime) {
-      setModalError("Please complete all required fields.");
-      return;
-    }
+  const swapById = useMemo(() => new Map(swaps.map((swap) => [swap.id, swap])), [swaps]);
+  const now = Date.now();
+  const isOverdue = (session: LearningSession) => session.status === "Upcoming" && new Date(session.date_time).getTime() < now;
+  const visibleSessions = useMemo(() => {
+    let list = sessions.filter((session) => tab === "Upcoming" ? session.status === "Upcoming" && new Date(session.date_time).getTime() >= now : tab === "Cancelled" ? session.status === "Cancelled" : session.status === "Completed" || isOverdue(session));
+    if (selectedDate) list = list.filter((session) => dateKey(new Date(session.date_time)) === selectedDate);
+    return list.sort((left, right) => new Date(left.date_time).getTime() - new Date(right.date_time).getTime());
+  }, [sessions, tab, selectedDate, now]);
 
-    const swapObj = swaps.find((s) => s.id === selectedSwapId);
-    if (!swapObj) {
-      setModalError("Please select a valid active swap.");
-      return;
-    }
+  const calendarCells = useMemo(() => {
+    const firstDay = new Date(month.getFullYear(), month.getMonth(), 1).getDay();
+    const days = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+    return [...Array(firstDay).fill(null), ...Array.from({ length: days }, (_, index) => index + 1)];
+  }, [month]);
+  const sessionDates = new Set(sessions.map((session) => dateKey(new Date(session.date_time))));
+  const tabCounts = {
+    Upcoming: sessions.filter((session) => session.status === "Upcoming" && new Date(session.date_time).getTime() >= now).length,
+    Past: sessions.filter((session) => session.status === "Completed" || isOverdue(session)).length,
+    Cancelled: sessions.filter((session) => session.status === "Cancelled").length,
+  };
 
-    setIsSubmitting(true);
-    setModalError(null);
-
+  const updateStatus = async (sessionId: string, status: "Completed" | "Cancelled") => {
+    setActionLoading(sessionId);
+    setError(null);
     try {
-      // Pick skill id (either the teach or learn skill of the swap)
-      await sessionService.scheduleSession({
-        swap_id: selectedSwapId,
-        skill_id: swapObj.i_learn_skill, // or i_teach_skill
-        title: sessionTitle.trim(),
-        date_time: new Date(sessionDateTime).toISOString(),
-        duration_minutes: Number(durationMinutes),
-        meeting_link: meetingLink.trim() || undefined,
-        notes: notes.trim() || undefined,
-      });
-
-      setIsScheduleModalOpen(false);
-      setSessionTitle("");
-      setSessionDateTime("");
-      setNotes("");
-      fetchSessionsAndSwaps();
-    } catch (err: any) {
-      setModalError(err.message || "Failed to schedule session");
+      await sessionService.updateSession(sessionId, { status });
+      await loadData();
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : "Could not update the session.");
     } finally {
-      setIsSubmitting(false);
+      setActionLoading(null);
     }
   };
 
-  const handleUpdateStatus = async (sessionId: string, status: "Completed" | "Cancelled") => {
+  const saveReschedule = async (session: LearningSession) => {
+    if (!rescheduleValue) return;
+    setActionLoading(session.id);
+    setError(null);
     try {
-      await sessionService.updateSession(sessionId, { status: status as any });
-      fetchSessionsAndSwaps();
-    } catch (err: any) {
-      alert(err.message || "Failed to update session status");
+      await sessionService.updateSession(session.id, { date_time: new Date(rescheduleValue).toISOString() });
+      setRescheduleId(null);
+      setRescheduleValue("");
+      await loadData();
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : "Could not reschedule.");
+    } finally {
+      setActionLoading(null);
     }
   };
 
-  if (!isAuthenticated) {
-    return (
-      <div className="max-w-md mx-auto py-24 text-center space-y-4">
-        <Calendar className="w-12 h-12 text-indigo-600 mx-auto" />
-        <h2 className="text-xl font-bold text-slate-900">Sign in to schedule learning sessions</h2>
-        <Link href="/login">
-          <Button variant="primary">Sign In</Button>
-        </Link>
-      </div>
-    );
-  }
+  if (!isAuthenticated) return <div className="sessions-dashboard-empty"><CalendarDays /><h1>Sign in to manage sessions</h1><Link href="/login"><Button variant="primary">Sign in</Button></Link></div>;
 
-  const upcomingSessions = sessions.filter((s) => s.status === "Upcoming");
-  const pastSessions = sessions.filter((s) => s.status !== "Upcoming");
+  const preferredSwapId = swapIdParam || swaps.find((swap) => swap.status === "Active")?.id;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
-            <Calendar className="w-7 h-7 text-indigo-600" />
-            Learning Sessions
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Coordinate 1-on-1 video or in-person mentorship sessions with your exchange partners.
-          </p>
-        </div>
-
-        <div className="flex items-center space-x-3">
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setIsScheduleModalOpen(true)}
-            disabled={swaps.length === 0}
-          >
-            <Plus className="w-4 h-4 mr-1.5" />
-            Schedule Session
-          </Button>
-        </div>
+    <main className="sessions-dashboard-page">
+      <div className="sessions-dashboard-layout">
+        <section className="sessions-dashboard-main">
+          <header className="sessions-dashboard-header"><div><h1>My Sessions</h1><p>Manage your upcoming and past skill exchange sessions.</p></div><Link href={preferredSwapId ? `/sessions/schedule/${preferredSwapId}` : "/matches"} className="sessions-add-button"><Plus />Schedule a Session</Link></header>
+          <nav className="sessions-status-tabs" aria-label="Session status">{sessionTabs.map((status) => <button key={status} className={tab === status ? "active" : ""} onClick={() => { setTab(status); setSelectedDate(""); }}>{status}<span>{tabCounts[status]}</span></button>)}</nav>
+          <div className="sessions-section-heading"><div><h2>{tab} Sessions</h2><p>{tab === "Upcoming" ? "Your scheduled skill exchange sessions." : tab === "Past" ? "Completed sessions and learning history." : "Sessions you or your partner cancelled."}</p></div><button className="sessions-reload" onClick={loadData} title="Refresh sessions" aria-label="Refresh sessions"><RefreshCw /></button></div>
+          {error && <div className="sessions-inline-error"><XCircle />{error}</div>}
+          {loading ? <div className="sessions-loading" role="status">Loading sessions...</div> : visibleSessions.length ? <div className="session-card-list">{visibleSessions.map((session) => {
+            const swap = swapById.get(session.swap_id);
+            const partnerName = swap?.partner_name || "Exchange partner";
+            const partnerUsername = swap?.partner_username;
+            const date = new Date(session.date_time);
+            return <article className="session-dashboard-card" key={session.id}>
+              <div className="session-date-badge"><strong>{date.toLocaleDateString(undefined, { month: "short" })}</strong><b>{date.getDate()}</b><span>{date.toLocaleDateString(undefined, { weekday: "short" })}</span></div>
+              <Avatar src={swap?.partner_avatar} name={partnerName} size="lg" />
+              <div className="session-card-info"><h3>{session.title}</h3><p>with {partnerUsername ? <Link href={`/profile/${partnerUsername}`}>{partnerName}</Link> : partnerName}</p><div className="session-skill-pills">{swap && <><span className="learn">You learn · {swap.i_learn_skill}</span><span className="teach">You teach · {swap.i_teach_skill}</span></>}</div><div className="session-time-line"><span><Clock3 />{date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })} · {session.duration_minutes} min</span><span>{session.meeting_link ? <><Video />Online session</> : <><MapPinIcon />Session details</>}</span></div></div>
+              <div className="session-card-actions"><Badge variant={isOverdue(session) ? "warning" : session.status === "Upcoming" ? "warning" : session.status === "Completed" ? "success" : "secondary"}>{isOverdue(session) ? "Overdue" : session.status}</Badge>{session.status === "Upcoming" && <>{!isOverdue(session) && session.meeting_link && <a className="session-join-button" href={session.meeting_link} target="_blank" rel="noreferrer"><Video />Join Session</a>}<button className="session-reschedule-button" onClick={() => { setRescheduleId(rescheduleId === session.id ? null : session.id); setRescheduleValue(new Date(new Date(session.date_time).getTime() - new Date(session.date_time).getTimezoneOffset() * 60000).toISOString().slice(0, 16)); }}><CalendarDays />Reschedule</button>{isOverdue(session) ? <button className="session-feedback-button" disabled={actionLoading === session.id} onClick={() => updateStatus(session.id, "Completed")}><Check />Mark complete</button> : <button className="session-cancel-button" disabled={actionLoading === session.id} onClick={() => updateStatus(session.id, "Cancelled")}><X />Cancel</button>}</>}{session.status === "Completed" && <Link className="session-feedback-button" href={`/reviews?swap_id=${session.swap_id}&partner_id=${swap?.partner_id || ""}`}><Sparkles />Give feedback</Link>}</div>
+              {rescheduleId === session.id && <form className="session-reschedule-form" onSubmit={(event) => { event.preventDefault(); void saveReschedule(session); }}><label>New date and time<input type="datetime-local" value={rescheduleValue} min={new Date().toISOString().slice(0, 16)} onChange={(event) => setRescheduleValue(event.target.value)} required /></label><Button type="submit" size="sm" variant="primary" isLoading={actionLoading === session.id}>Save time</Button></form>}
+            </article>;
+          })}</div> : <div className="sessions-empty-state"><span><CalendarDays /></span><h2>{selectedDate ? "No sessions on this date" : `No ${tab.toLowerCase()} sessions`}</h2><p>{selectedDate ? "Choose another date or clear the calendar filter." : tab === "Upcoming" ? "Schedule a session with one of your active skill-swap partners." : "Your session history will show here."}</p>{selectedDate ? <button onClick={() => setSelectedDate("")}>Clear date filter</button> : tab === "Upcoming" && preferredSwapId ? <Link href={`/sessions/schedule/${preferredSwapId}`}><Button variant="primary" size="sm">Schedule a Session</Button></Link> : null}</div>}
+        </section>
+        <aside className="sessions-dashboard-aside">
+          <section className="sessions-calendar-panel"><header><strong>{month.toLocaleDateString(undefined, { month: "long", year: "numeric" })}</strong><div><button aria-label="Previous month" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}><ArrowLeft /></button><button aria-label="Next month" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}><ArrowRight /></button></div></header><div className="sessions-calendar-grid">{["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => <span className="weekday" key={day}>{day}</span>)}{calendarCells.map((day, index) => day ? <button type="button" key={`${day}-${index}`} className={`${selectedDate === dateKey(new Date(month.getFullYear(), month.getMonth(), day)) ? "selected" : ""} ${sessionDates.has(dateKey(new Date(month.getFullYear(), month.getMonth(), day))) ? "has-session" : ""}`} onClick={() => { const key = dateKey(new Date(month.getFullYear(), month.getMonth(), day)); setSelectedDate(selectedDate === key ? "" : key); }}>{day}</button> : <span key={`empty-${index}`} />)}</div></section>
+          <section className="sessions-stats-panel"><header><h2>Session Statistics</h2><button onClick={() => setTab("Past")}>View history <ArrowRight /></button></header><div><span><CalendarDays /><strong>{sessions.length}</strong><small>Total sessions</small></span><span><CheckCircle2 /><strong>{tabCounts.Past}</strong><small>Completed</small></span><span><Clock3 /><strong>{tabCounts.Upcoming}</strong><small>Upcoming</small></span><span><Users /><strong>{swaps.filter((swap) => swap.status === "Active").length}</strong><small>Active swaps</small></span></div></section>
+          <blockquote className="sessions-quote"><span>✳</span><p>Every session is a step towards a better you.</p><small>Keep learning. Keep growing.</small></blockquote>
+          <section className="sessions-quick-links"><h2>Quick Links</h2><Link href={preferredSwapId ? `/sessions/schedule/${preferredSwapId}` : "/matches"}><CalendarDays /><span><strong>Schedule a Session</strong><small>Find a time and book a new session</small></span><ArrowRight /></Link><Link href="/progress"><CheckCircle2 /><span><strong>View My Progress</strong><small>Track skills you’re learning and teaching</small></span><ArrowRight /></Link><Link href="/reviews"><Sparkles /><span><strong>Give Feedback</strong><small>Help your peers grow</small></span><ArrowRight /></Link></section>
+        </aside>
       </div>
-
-      {isLoading ? (
-        <div className="py-24 text-center text-slate-400 text-sm">Loading learning sessions...</div>
-      ) : swaps.length === 0 ? (
-        <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 space-y-3 max-w-md mx-auto">
-          <ArrowRightLeft className="w-10 h-10 text-slate-400 mx-auto" />
-          <h3 className="font-bold text-slate-900 text-base">No Active Swaps</h3>
-          <p className="text-xs text-slate-500">
-            You must be in an active skill swap to schedule collaborative learning sessions.
-          </p>
-          <Link href="/explore">
-            <Button variant="primary" size="sm">
-              Discover Mentors →
-            </Button>
-          </Link>
-        </div>
-      ) : (
-        <div className="space-y-8">
-          {/* Upcoming Sessions Section */}
-          <div className="space-y-4">
-            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-indigo-600" />
-              Upcoming Sessions ({upcomingSessions.length})
-            </h2>
-
-            {upcomingSessions.length === 0 ? (
-              <div className="p-8 bg-white rounded-xl border border-slate-200 text-center text-xs text-slate-400">
-                No upcoming sessions scheduled. Click "Schedule Session" above to set a date with your partner.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {upcomingSessions.map((sess) => (
-                  <Card key={sess.id} className="border-slate-200 shadow-xs hover:border-slate-300 transition-colors">
-                    <CardContent className="p-5 space-y-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <h3 className="font-bold text-sm text-slate-900">{sess.title}</h3>
-                          <p className="text-xs text-slate-500 font-medium mt-0.5">
-                            Focus Skill: <span className="text-indigo-600">{sess.skill_name}</span>
-                          </p>
-                        </div>
-                        <Badge variant="warning">{sess.status}</Badge>
-                      </div>
-
-                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 space-y-1.5 text-xs text-slate-700">
-                        <div className="flex items-center space-x-2">
-                          <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span className="font-semibold">{formatDateTime(sess.date_time)}</span>
-                          <span className="text-slate-400">({sess.duration_minutes} mins)</span>
-                        </div>
-                        {sess.meeting_link && (
-                          <div className="flex items-center space-x-2">
-                            <Video className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                            <a
-                              href={sess.meeting_link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-indigo-600 hover:underline truncate"
-                            >
-                              {sess.meeting_link}
-                            </a>
-                          </div>
-                        )}
-                      </div>
-
-                      {sess.notes && (
-                        <p className="text-xs text-slate-600 italic bg-white p-2 rounded-md border border-slate-100">
-                          "{sess.notes}"
-                        </p>
-                      )}
-
-                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                        <span className="text-slate-400 text-[11px]">
-                          Scheduled by {sess.scheduled_by_name}
-                        </span>
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleUpdateStatus(sess.id, "Completed")}
-                            className="text-xs text-emerald-600 hover:text-emerald-700"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-                            Complete
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleUpdateStatus(sess.id, "Cancelled")}
-                            className="text-xs text-slate-400 hover:text-rose-600"
-                          >
-                            <XCircle className="w-3.5 h-3.5 mr-1" />
-                            Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Past / Completed Sessions */}
-          {pastSessions.length > 0 && (
-            <div className="space-y-4 pt-4 border-t border-slate-200">
-              <h2 className="text-base font-bold text-slate-900">Past & Completed Sessions</h2>
-              <div className="divide-y divide-slate-100 bg-white rounded-xl border border-slate-200 overflow-hidden">
-                {pastSessions.map((sess) => (
-                  <div key={sess.id} className="p-4 flex items-center justify-between text-xs">
-                    <div>
-                      <p className="font-bold text-slate-900">{sess.title}</p>
-                      <p className="text-slate-400 mt-0.5">
-                        {formatDateTime(sess.date_time)} • {sess.skill_name}
-                      </p>
-                    </div>
-                    <Badge variant={sess.status === "Completed" ? "success" : "secondary"}>
-                      {sess.status}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Schedule Modal */}
-      {isScheduleModalOpen && (
-        <Modal
-          isOpen={isScheduleModalOpen}
-          onClose={() => setIsScheduleModalOpen(false)}
-          title="Schedule Learning Session"
-          description="Set a date, duration, and virtual meeting link for your peer exchange."
-        >
-          <form onSubmit={handleCreateSession} className="space-y-4">
-            {modalError && (
-              <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-700">
-                {modalError}
-              </div>
-            )}
-
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-slate-700">Select Active Swap</label>
-              <select
-                value={selectedSwapId}
-                onChange={(e) => setSelectedSwapId(e.target.value)}
-                className="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                required
-              >
-                {swaps.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    With {s.partner_name} ({s.i_teach_skill} ↔ {s.i_learn_skill})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <Input
-              label="Session Title"
-              placeholder="e.g. Python Functions Deep Dive, Figma Layouts Workshop"
-              value={sessionTitle}
-              onChange={(e) => setSessionTitle(e.target.value)}
-              required
-            />
-
-            <div className="grid grid-cols-2 gap-3">
-              <Input
-                label="Date & Time"
-                type="datetime-local"
-                value={sessionDateTime}
-                onChange={(e) => setSessionDateTime(e.target.value)}
-                required
-              />
-              <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-slate-700">Duration</label>
-                <select
-                  value={durationMinutes}
-                  onChange={(e) => setDurationMinutes(Number(e.target.value))}
-                  className="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value={30}>30 minutes</option>
-                  <option value={45}>45 minutes</option>
-                  <option value={60}>60 minutes (1 hour)</option>
-                  <option value={90}>90 minutes</option>
-                  <option value={120}>2 hours</option>
-                </select>
-              </div>
-            </div>
-
-            <Input
-              label="Video Call / Meeting Link (Optional)"
-              placeholder="e.g. https://meet.jit.si/skillswap-session or Zoom link"
-              value={meetingLink}
-              onChange={(e) => setMeetingLink(e.target.value)}
-            />
-
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-slate-700">Agenda / Prep Notes</label>
-              <textarea
-                rows={2}
-                placeholder="What should the learner have prepared?"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-
-            <div className="pt-2 flex justify-end space-x-3">
-              <Button type="button" variant="outline" onClick={() => setIsScheduleModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" variant="primary" isLoading={isSubmitting}>
-                Confirm Schedule
-              </Button>
-            </div>
-          </form>
-        </Modal>
-      )}
-    </div>
+    </main>
   );
+}
+
+function MapPinIcon() {
+  return <MapPin aria-hidden="true" />;
 }

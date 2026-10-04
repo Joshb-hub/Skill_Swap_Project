@@ -1,160 +1,143 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { ArrowRight, ArrowRightLeft, Bell, CalendarDays, Check, CheckCheck, MessageCircle, Settings, ShieldCheck, Sparkles, Star, TrendingUp, Users } from "lucide-react";
 import { Notification } from "@/types";
 import { notificationService } from "@/services";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/Button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
-import {
-  Bell, CheckCheck, Clock, ArrowRightLeft, MessageSquare,
-  Calendar, Star, TrendingUp
-} from "lucide-react";
 import { formatTimeAgo } from "@/lib/utils";
+
+type NotificationCategory = "Requests" | "Sessions" | "Messages" | "Reviews" | "System";
+type NotificationTab = "All" | "Unread" | NotificationCategory;
+const categories: NotificationCategory[] = ["Requests", "Sessions", "Messages", "Reviews", "System"];
+const tabs: NotificationTab[] = ["All", "Unread", ...categories];
+
+function categoryFor(type: string): NotificationCategory {
+  if (type.startsWith("request_") || type === "new_request") return "Requests";
+  if (type.startsWith("session_")) return "Sessions";
+  if (type.includes("message")) return "Messages";
+  if (type.includes("review")) return "Reviews";
+  return "System";
+}
+
+function NotificationIcon({ type }: { type: string }) {
+  const category = categoryFor(type);
+  if (category === "Requests") return <ArrowRightLeft />;
+  if (category === "Sessions") return <CalendarDays />;
+  if (category === "Messages") return <MessageCircle />;
+  if (category === "Reviews") return <Star />;
+  if (type.includes("progress") || type.includes("milestone")) return <TrendingUp />;
+  return <Bell />;
+}
+
+function actionLabel(notification: Notification) {
+  const category = categoryFor(notification.type);
+  if (category === "Requests") return "View request";
+  if (category === "Sessions") return "View session";
+  if (category === "Messages") return "Reply";
+  if (category === "Reviews") return "View review";
+  return "View details";
+}
 
 export default function NotificationsPage() {
   const { isAuthenticated } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [tab, setTab] = useState<NotificationTab>("All");
+  const [selectedCategories, setSelectedCategories] = useState<Set<NotificationCategory>>(new Set(categories));
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [markingId, setMarkingId] = useState<string | null>(null);
+  const [markingAll, setMarkingAll] = useState(false);
 
-  const fetchNotifs = async () => {
-    setIsLoading(true);
+  const loadNotifications = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      const data = await notificationService.getNotifications();
-      setNotifications(data);
-    } catch (err) {
-      console.error(err);
+      setNotifications(await notificationService.getNotifications());
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Could not load notifications.");
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchNotifs();
-    } else {
-      setIsLoading(false);
-    }
+    if (isAuthenticated) void loadNotifications();
+    else setLoading(false);
   }, [isAuthenticated]);
 
-  const handleMarkRead = async (id: string) => {
+  const unreadCount = notifications.filter((notification) => !notification.is_read).length;
+  const counts = useMemo(() => {
+    const result: Record<NotificationCategory, number> = { Requests: 0, Sessions: 0, Messages: 0, Reviews: 0, System: 0 };
+    notifications.forEach((notification) => { result[categoryFor(notification.type)] += 1; });
+    return result;
+  }, [notifications]);
+  const visibleNotifications = notifications.filter((notification) => {
+    const category = categoryFor(notification.type);
+    if (!selectedCategories.has(category)) return false;
+    if (tab === "Unread") return !notification.is_read;
+    if (categories.includes(tab as NotificationCategory)) return category === tab;
+    return true;
+  });
+
+  const markRead = async (notification: Notification) => {
+    if (notification.is_read) return;
+    setMarkingId(notification.id);
+    setError(null);
     try {
-      await notificationService.markRead(id);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
-      );
-    } catch (err) {
-      console.error(err);
+      await notificationService.markRead(notification.id);
+      setNotifications((current) => current.map((item) => item.id === notification.id ? { ...item, is_read: true } : item));
+    } catch (markError) {
+      setError(markError instanceof Error ? markError.message : "Could not mark notification as read.");
+    } finally {
+      setMarkingId(null);
     }
   };
 
-  const handleMarkAllRead = async () => {
+  const markAllRead = async () => {
+    setMarkingAll(true);
+    setError(null);
     try {
       await notificationService.markAllRead();
-      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-    } catch (err) {
-      console.error(err);
+      setNotifications((current) => current.map((item) => ({ ...item, is_read: true })));
+    } catch (markError) {
+      setError(markError instanceof Error ? markError.message : "Could not mark all as read.");
+    } finally {
+      setMarkingAll(false);
     }
   };
 
-  const getIcon = (type: string) => {
-    switch (type) {
-      case "new_request":
-      case "request_accepted":
-        return <ArrowRightLeft className="w-4 h-4 text-indigo-600" />;
-      case "new_message":
-        return <MessageSquare className="w-4 h-4 text-violet-600" />;
-      case "session_scheduled":
-      case "session_rescheduled":
-        return <Calendar className="w-4 h-4 text-emerald-600" />;
-      case "review_received":
-        return <Star className="w-4 h-4 text-amber-500 fill-amber-500" />;
-      default:
-        return <Bell className="w-4 h-4 text-slate-500" />;
-    }
+  const toggleCategory = (category: NotificationCategory) => {
+    setSelectedCategories((current) => {
+      const next = new Set(current);
+      if (next.has(category)) next.delete(category);
+      else next.add(category);
+      return next;
+    });
   };
 
-  if (!isAuthenticated) {
-    return (
-      <div className="max-w-md mx-auto py-24 text-center space-y-4">
-        <Bell className="w-12 h-12 text-indigo-600 mx-auto" />
-        <h2 className="text-xl font-bold text-slate-900">Sign in to view your notifications</h2>
-        <Link href="/login">
-          <Button variant="primary">Sign In</Button>
-        </Link>
-      </div>
-    );
-  }
-
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  if (!isAuthenticated) return <div className="notifications-empty-auth"><Bell /><h1>Sign in to view notifications</h1><Link href="/login"><Button variant="primary">Sign in</Button></Link></div>;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <Bell className="w-6 h-6 text-indigo-600" />
-            Notifications
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Real-time alerts for requests, messages, scheduled sessions, and milestone progress.
-          </p>
-        </div>
+    <main className="notifications-dashboard-page">
+      <div className="notifications-dashboard-layout">
+        <section className="notifications-main-column">
+          <header className="notifications-dashboard-header"><div><h1>Notifications</h1><p>Stay updated with your skill swap journey.</p></div><span className="notifications-header-note">Good things happen <span>♡</span></span></header>
+          <nav className="notifications-tabs" aria-label="Notification category tabs">{tabs.map((item) => <button key={item} className={tab === item ? "active" : ""} onClick={() => { setTab(item); if (item === "All" || item === "Unread") setSelectedCategories(new Set(categories)); else setSelectedCategories(new Set([item])); }}>{item}<span>{item === "All" ? notifications.length : item === "Unread" ? unreadCount : counts[item]}</span></button>)}</nav>
+          {error && <div className="notifications-inline-error">{error}</div>}
+          {loading ? <div className="notifications-loading" role="status">Loading notifications...</div> : visibleNotifications.length ? <div className="notification-list">{visibleNotifications.map((notification) => <article className={`notification-card ${notification.is_read ? "read" : "unread"}`} key={notification.id}><span className={`notification-icon ${categoryFor(notification.type).toLowerCase()}`}><NotificationIcon type={notification.type} /></span><div className="notification-copy"><div className="notification-title-row"><h2>{notification.title}</h2>{!notification.is_read && <i aria-label="Unread" />}</div><p>{notification.message}</p><div className="notification-meta"><span>{formatTimeAgo(notification.created_at)}</span>{notification.link && <Link onClick={() => void markRead(notification)} href={notification.link}>{actionLabel(notification)} <ArrowRight /></Link>}</div></div><div className="notification-actions">{!notification.is_read && <button disabled={markingId === notification.id} onClick={() => void markRead(notification)} title="Mark as read" aria-label="Mark as read"><Check /></button>}<button title="Notification options" aria-label="Notification options">···</button></div></article>)}</div> : <div className="notifications-empty-list"><span><Bell /></span><h2>{tab === "Unread" ? "You’re all caught up" : "No notifications here"}</h2><p>{tab === "Unread" ? "There are no unread notifications." : "Updates in this category will appear here."}</p></div>}
+        </section>
 
-        {unreadCount > 0 && (
-          <Button variant="outline" size="sm" onClick={handleMarkAllRead} className="text-xs">
-            <CheckCheck className="w-3.5 h-3.5 mr-1" />
-            Mark all read
-          </Button>
-        )}
+        <aside className="notifications-dashboard-aside">
+          <section className="notifications-unread-summary"><span><Bell /></span><div><strong>{unreadCount} Unread Notifications</strong><p>{unreadCount ? `You have ${unreadCount} new ${unreadCount === 1 ? "notification" : "notifications"}` : "You’re all caught up"}</p></div><button onClick={() => void markAllRead()} disabled={!unreadCount || markingAll}>{markingAll ? "Marking..." : "Mark all as read"}</button></section>
+          <section className="notification-filter-panel"><h2><span><ArrowRightLeft /></span>Notification Filters</h2><label className="notification-filter-row all"><input type="checkbox" checked={selectedCategories.size === categories.length} onChange={() => setSelectedCategories(selectedCategories.size === categories.length ? new Set() : new Set(categories))} /><span>All Notifications</span><b>{notifications.length}</b></label>{categories.map((category) => <label className="notification-filter-row" key={category}><input type="checkbox" checked={selectedCategories.has(category)} onChange={() => toggleCategory(category)} /><span>{category === "Requests" ? "Skill Swap Requests" : category === "Sessions" ? "Session Updates" : category === "System" ? "Platform Updates" : category}</span><b>{counts[category]}</b></label>)}</section>
+          <Link href="/settings" className="notification-preferences-card"><span><Settings /></span><div><strong>Notification Preferences</strong><small>Manage how and when you’re notified.</small></div><ArrowRight /></Link>
+          <div className="notifications-aside-art"><span>Never miss an opportunity to learn</span><i /><i /></div>
+          <p className="notifications-aside-caption">Same skills. New perspectives.</p>
+        </aside>
       </div>
-
-      <Card className="border-slate-200 shadow-sm overflow-hidden">
-        <CardContent className="p-0 divide-y divide-slate-100">
-          {isLoading ? (
-            <div className="py-20 text-center text-xs text-slate-400">Loading notifications...</div>
-          ) : notifications.length === 0 ? (
-            <div className="py-20 text-center text-xs text-slate-400 space-y-2">
-              <Bell className="w-8 h-8 text-slate-300 mx-auto" />
-              <p>No notifications yet. You're all caught up!</p>
-            </div>
-          ) : (
-            notifications.map((n) => (
-              <div
-                key={n.id}
-                onClick={() => !n.is_read && handleMarkRead(n.id)}
-                className={`p-4 sm:p-5 flex items-start justify-between gap-4 transition-colors ${
-                  n.is_read ? "bg-white hover:bg-slate-50" : "bg-indigo-50/40 hover:bg-indigo-50/60"
-                }`}
-              >
-                <div className="flex items-start space-x-3.5">
-                  <div className="p-2 rounded-xl bg-white border border-slate-200 shadow-xs mt-0.5">
-                    {getIcon(n.type)}
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center space-x-2">
-                      <h4 className="font-bold text-sm text-slate-900">{n.title}</h4>
-                      {!n.is_read && (
-                        <span className="w-2 h-2 rounded-full bg-indigo-600 shrink-0" />
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-600 leading-relaxed">{n.message}</p>
-                    <div className="flex items-center space-x-3 pt-1 text-[11px] text-slate-400">
-                      <span>{formatTimeAgo(n.created_at)}</span>
-                      {n.link && (
-                        <Link href={n.link} className="text-indigo-600 font-semibold hover:underline">
-                          View details →
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    </main>
   );
 }
