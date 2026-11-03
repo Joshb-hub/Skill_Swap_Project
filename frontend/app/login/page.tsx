@@ -1,9 +1,36 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Heart, Lock, Shield, Sparkles, Users } from "lucide-react";
+import { useRouter } from "next/navigation";
+import React, { useState } from "react";
+import { ArrowRight, Heart, Lock, Shield, Sparkles, Users, AlertCircle } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const { login } = useAuth();
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      await login({ identifier: identifier.trim(), password });
+      router.push("/dashboard");
+    } catch (err: any) {
+      setError(err.message || "Unable to sign in. Please check your credentials.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="auth-page">
       <div className="auth-intro">
@@ -25,8 +52,27 @@ export default function LoginPage() {
 
       <div className="auth-panel">
         <div className="auth-logo"><div><Users /></div><h2>Welcome to SkillSwap</h2><p>Sign in to continue your journey of learning,<br className="hidden sm:block" /> teaching and meaningful connections.</p></div>
-        <button type="button" className="microsoft-button"><span className="microsoft-mark"><i /><i /><i /><i /></span>Sign in with Microsoft <ArrowRight /></button>
-        <div className="secure-callout"><Shield /><div><strong>Securely powered by Microsoft Entra ID</strong><span>Your account, security, and privacy are handled by Microsoft. We never store your credentials.</span></div></div>
+
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+          {error && (
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg flex items-center space-x-2 text-rose-700 text-xs">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+          <Input label="Email or username" type="text" value={identifier} onChange={(event) => setIdentifier(event.target.value)} placeholder="jordan@example.com or jordan_m" required />
+          <Input label="Password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" required />
+          <Button type="submit" variant="primary" size="lg" className="w-full" isLoading={isLoading}>
+            Sign in <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+          <div className="text-right">
+            <Link href="/forgot-password" className="text-xs text-slate-500 hover:text-indigo-600">
+              Forgot password?
+            </Link>
+          </div>
+        </form>
+
+        <div className="secure-callout"><Shield /><div><strong>Secure custom JWT authentication</strong><span>Your account is protected by FastAPI + PostgreSQL, with password hashing and signed access tokens.</span></div></div>
         <div className="auth-perks"><span><b><Lock /></b>Secure<br />Authentication</span><span><b><Users /></b>Easy<br />Account Access</span><span><b><Shield /></b>Your Privacy<br />Our Priority</span></div>
         <p className="auth-signup">
           Don't have an account yet?{" "}

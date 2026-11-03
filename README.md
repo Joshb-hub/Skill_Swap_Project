@@ -104,16 +104,18 @@ Review & Continue Learning
 ### Database & Real-Time Services
 
 - **PostgreSQL** — Persistent application data
-- **Redis** — Caching, rate limiting, temporary state, and real-time infrastructure
+- **Redis** — Caching, rate limiting, temporary state, and supporting real-time infrastructure
 - **WebSockets** — Real-time chat communication
 
 ### Authentication
 
-- **Microsoft Entra External ID**
-- **OAuth 2.0**
-- **OpenID Connect**
+- **Custom FastAPI JWT authentication**
+- **Argon2 / bcrypt password hashing**
+- **PostgreSQL-backed user storage**
 
-Authentication and account management are handled by Microsoft Entra External ID. SkillSwap does not store user passwords.
+SkillSwap uses a custom email/username and password authentication flow built on FastAPI, SQLAlchemy, and PostgreSQL. Passwords are hashed before storage and protected routes require a valid JWT access token.
+
+The SkillSwap database stores application-specific information such as the user's profile, skills, swaps, sessions, progress, reviews, and notifications alongside the authenticated local account record.
 
 ---
 
@@ -137,9 +139,9 @@ Authentication and account management are handled by Microsoft Entra External ID
              │                │                │
              ▼                ▼                ▼
       ┌────────────┐   ┌────────────┐   ┌────────────┐
-      │ PostgreSQL │   │   Redis    │   │   Entra    │
-      │ Application│   │ Cache &    │   │  External  │
-      │    Data    │   │ Rate Limit │   │     ID     │
+      │ PostgreSQL │   │   Redis    │   │  JWT Auth  │
+      │ Application│   │ Cache &    │   │   Tokens   │
+      │    Data    │   │ Rate Limit │   │ & Sessions │
       └────────────┘   └────────────┘   └────────────┘
                               │
                               ▼
@@ -150,32 +152,34 @@ Authentication and account management are handled by Microsoft Entra External ID
 
 ## Authentication
 
-SkillSwap uses **Microsoft Entra External ID** for authentication.
+SkillSwap uses **custom FastAPI JWT authentication** backed by PostgreSQL.
 
-The application does not implement or store its own passwords.
+Users create an account in SkillSwap, log in with their email or username and password, and receive a signed JWT access token for protected API access.
 
 ```text
 User
  │
  ▼
-SkillSwap
+SkillSwap Frontend
  │
  ▼
-Microsoft Entra External ID
+SkillSwap FastAPI Backend
  │
- ├── Sign In
  ├── Sign Up
- ├── Account Recovery
- └── Identity Verification
+ ├── Sign In
+ ├── Password Reset
+ └── Email Verification
  │
  ▼
-Authenticated User
+PostgreSQL User + Profile Data
  │
  ▼
-SkillSwap Profile & Application Data
+Protected Resources / Authorization
 ```
 
-Entra manages identity and authentication, while PostgreSQL stores SkillSwap-specific profile and application data.
+The backend validates JWTs, hashes passwords, and enforces access rules for protected resources.
+
+> **Important:** Authentication is handled entirely by the SkillSwap backend and database. No external identity provider or OAuth callback flow is required.
 
 ---
 
@@ -186,27 +190,28 @@ SkillSwap/
 │
 ├── backend/
 │   ├── app/
-│   │   ├── api/
-│   │   ├── core/
-│   │   ├── models/
-│   │   ├── schemas/
-│   │   ├── services/
-│   │   ├── websocket/
-│   │   └── main.py
+│   │   ├── api/              # API routes/endpoints
+│   │   ├── core/             # Core configuration and security
+│   │   ├── models/           # Database models
+│   │   ├── schemas/          # Pydantic request/response schemas
+│   │   ├── services/         # Business/application services
+│   │   ├── websocket/        # Real-time WebSocket functionality
+│   │   └── main.py           # FastAPI application entry point
 │   │
-│   ├── alembic/
-│   ├── tests/
-│   ├── requirements.txt
-│   └── alembic.ini
+│   ├── alembic/              # Database migrations
+│   ├── tests/                # Backend tests
+│   ├── uploads/              # Uploaded files
+│   ├── requirements.txt      # Python dependencies
+│   └── alembic.ini           # Alembic configuration
 │
 ├── frontend/
-│   ├── app/
-│   ├── components/
-│   ├── hooks/
-│   ├── lib/
-│   ├── services/
-│   ├── types/
-│   └── package.json
+│   ├── app/                  # Next.js routes/pages
+│   ├── components/           # Reusable UI components
+│   ├── hooks/                # React hooks
+│   ├── lib/                  # Frontend utilities/configuration
+│   ├── services/             # API service functions
+│   ├── types/                # TypeScript types
+│   └── package.json          # Node.js dependencies and scripts
 │
 ├── implementation_plan_skill_swap.md
 ├── skill_swap_project_requirements.md
@@ -218,26 +223,40 @@ SkillSwap/
 
 ## Running Locally
 
+### Prerequisites
+
+Install the following before starting:
+
+- Python
+- Node.js and npm
+- Git
+- PostgreSQL, when using the PostgreSQL configuration
+- Redis, when the configured application features require it
+
+You only need the local project environment configuration for your custom FastAPI JWT flow.
+
 ### Backend
 
-```bash
-cd backend
-python -m venv .venv
-```
-
-Windows:
+Open PowerShell in the project root:
 
 ```powershell
-.venv\Scripts\Activate.ps1
+cd backend
+```
+
+Create and activate the virtual environment:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 ```
 
 Install dependencies:
 
-```bash
+```powershell
 pip install -r requirements.txt
 ```
 
-Configure your environment variables in:
+Configure:
 
 ```text
 backend/.env
@@ -245,49 +264,127 @@ backend/.env
 
 Run database migrations:
 
-```bash
+```powershell
 alembic upgrade head
 ```
 
 Start the FastAPI server:
 
-```bash
+```powershell
 uvicorn app.main:app --reload
+```
+
+The backend will normally be available at:
+
+```text
+http://127.0.0.1:8000
+```
+
+FastAPI API documentation is normally available at:
+
+```text
+http://127.0.0.1:8000/docs
 ```
 
 ### Frontend
 
-```bash
+Open a **second terminal**.
+
+From the project root:
+
+```powershell
 cd frontend
+```
+
+Install dependencies:
+
+```powershell
 npm install
+```
+
+Start the Next.js development server:
+
+```powershell
 npm run dev
 ```
 
-The frontend will run using the Next.js development server.
+The frontend will normally be available at:
+
+```text
+http://localhost:3000
+```
+
+> **Important:** `npm run dev` must be executed from the `frontend` directory because `package.json` is located there, not in the project root.
 
 ---
 
 ## Environment Variables
 
-Create:
+The project uses environment files for local configuration.
+
+Create/configure:
 
 ```text
 backend/.env
 frontend/.env.local
 ```
 
-Configure the required PostgreSQL, Redis, and Microsoft Entra External ID values.
+Typical configuration areas include:
 
-**Never commit environment files, credentials, API keys, client secrets, or other sensitive configuration to GitHub.**
+- PostgreSQL connection details
+- Redis connection details
+- JWT secret and token settings
+- Frontend/backend API URLs
+- Authentication configuration
+- Other application-specific settings required by the codebase
+
+Use the existing `.env.example` files as the reference for variable names.
+
+**Never commit `.env`, `.env.local`, credentials, client secrets, API keys, access tokens, or other sensitive configuration to GitHub.**
+
+---
+
+## Manual Configuration Required
+
+Some parts of the project cannot be completed simply by generating application code.
+
+Before considering the application fully functional, configure and verify:
+
+### Custom Authentication Setup
+
+- Configure PostgreSQL for the intended environment.
+- Set the backend JWT secret and token lifetime values.
+- Run Alembic migrations for the local user tables.
+- Configure the frontend API base URL.
+- Test sign-up, sign-in, sign-out, and account recovery.
+
+### Database
+
+- Configure PostgreSQL for the intended environment.
+- Set the database connection string.
+- Run Alembic migrations.
+- Verify tables and relationships.
+- Test CRUD operations from the application.
+
+### Redis
+
+- Configure a Redis instance if required by the implemented features.
+- Set the Redis connection details.
+- Verify connectivity.
+- Test rate limiting, caching, or temporary-state functionality where used.
+
+### Production Configuration
+
+For deployment, configure the production equivalents of all required environment variables and external services.
 
 ---
 
 ## Security & Privacy
 
-SkillSwap is designed with backend-enforced security and privacy controls.
+SkillSwap is designed around backend-enforced security and privacy controls.
 
-- Microsoft Entra External ID authentication
-- OAuth/OIDC token validation
+- Custom FastAPI JWT authentication
+- Password hashing with Argon2 / bcrypt
 - Backend authorization
 - Rate limiting
 - Protected WebSocket connections
@@ -298,25 +395,53 @@ SkillSwap is designed with backend-enforced security and privacy controls.
 - Secure environment configuration
 - Input validation
 
+Authentication credentials and password hashes remain under the responsibility of the SkillSwap backend and PostgreSQL database.
+
 ---
 
 ## Deployment
 
-The application is designed for production deployment with:
+The application is designed for deployment with:
 
 - **Vercel** for the Next.js frontend
 - **Cloud-hosted FastAPI backend**
 - **Managed PostgreSQL**
-- **Managed Redis**
-- **Microsoft Entra External ID** for authentication
+- **Managed Redis**, where required
+- **Custom JWT authentication** for local application identity and authorization
 
-Environment variables are configured separately for development and production environments.
+Environment variables must be configured separately for development and production.
+
+The exact hosting provider and service configuration can be selected according to the project's cost and deployment requirements.
 
 ---
 
 ## Project Status
 
-SkillSwap is an actively developed full-stack application focused on building a complete peer-to-peer skill exchange experience, from discovering learning partners to completing sessions and tracking progress.
+SkillSwap is an actively developed full-stack application.
+
+The repository contains the frontend and backend structure required to build the platform, while some external-service configuration and end-to-end integration work may still need to be completed.
+
+**Code being present does not automatically mean that a feature is fully verified.**
+
+A feature should be considered complete when:
+
+1. The required code is implemented.
+2. Required environment/configuration is present.
+3. External services are configured where necessary.
+4. The frontend and backend work together.
+5. The relevant flow has been tested successfully.
+
+For the detailed functional requirements, refer to:
+
+```text
+skill_swap_project_requirements.md
+```
+
+For the implementation sequence and remaining development work, refer to:
+
+```text
+implementation_plan_skill_swap.md
+```
 
 ---
 

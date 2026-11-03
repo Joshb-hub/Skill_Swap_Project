@@ -70,23 +70,26 @@ os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 app.mount("/api/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
 # Mount API Routers
-api_v1 = settings.API_V1_STR
-app.include_router(auth_router, prefix=api_v1)
-app.include_router(users_router, prefix=api_v1)
-app.include_router(profiles_router, prefix=api_v1)
-app.include_router(skills_router, prefix=api_v1)
-app.include_router(search_router, prefix=api_v1)
-app.include_router(matches_router, prefix=api_v1)
-app.include_router(requests_router, prefix=api_v1)
-app.include_router(swaps_router, prefix=api_v1)
-app.include_router(conversations_router, prefix=api_v1)
-app.include_router(messages_router, prefix=api_v1)
-app.include_router(progress_router, prefix=api_v1)
-app.include_router(sessions_router, prefix=api_v1)
-app.include_router(reviews_router, prefix=api_v1)
-app.include_router(notifications_router, prefix=api_v1)
-app.include_router(settings_router, prefix=api_v1)
-app.include_router(reports_router, prefix=api_v1)
+# Support both the historical /api prefix and the newer /api/v1 prefix for compatible clients.
+for prefix in list(dict.fromkeys([settings.API_V1_STR, "/api", "/api/v1"])):
+    if not prefix:
+        continue
+    app.include_router(auth_router, prefix=prefix)
+    app.include_router(users_router, prefix=prefix)
+    app.include_router(profiles_router, prefix=prefix)
+    app.include_router(skills_router, prefix=prefix)
+    app.include_router(search_router, prefix=prefix)
+    app.include_router(matches_router, prefix=prefix)
+    app.include_router(requests_router, prefix=prefix)
+    app.include_router(swaps_router, prefix=prefix)
+    app.include_router(conversations_router, prefix=prefix)
+    app.include_router(messages_router, prefix=prefix)
+    app.include_router(progress_router, prefix=prefix)
+    app.include_router(sessions_router, prefix=prefix)
+    app.include_router(reviews_router, prefix=prefix)
+    app.include_router(notifications_router, prefix=prefix)
+    app.include_router(settings_router, prefix=prefix)
+    app.include_router(reports_router, prefix=prefix)
 
 # Mount WebSocket router
 app.include_router(ws_router)

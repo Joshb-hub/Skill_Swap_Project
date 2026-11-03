@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { authService } from "@/services";
@@ -10,6 +10,14 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { CheckCircle2, AlertCircle, Mail, ArrowRightLeft } from "lucide-react";
 
 export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<div className="min-h-[85vh] flex items-center justify-center text-slate-600">Loading verification…</div>}>
+      <VerifyEmailPageContent />
+    </Suspense>
+  );
+}
+
+function VerifyEmailPageContent() {
   const searchParams = useSearchParams();
   const tokenParam = searchParams.get("token") || "";
   const emailParam = searchParams.get("email") || "";

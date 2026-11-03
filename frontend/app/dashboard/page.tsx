@@ -13,12 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { chatService, matchService, notificationService, sessionService, swapService } from "@/services";
 import type { Conversation, LearningSession, MatchResult, SwapRequest } from "@/types";
 
-const demoMatches = [
-  { name: "Arjun Mehta", profession: "Data Analyst", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80", location: "Kolkata, India", teach: ["Python", "Data Science"], learn: "UI/UX Design" },
-  { name: "Ishita Roy", profession: "Product Designer", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=160&q=80", location: "Bangalore, India", teach: ["Graphic Design", "Illustration"], learn: "Web Development" },
-  { name: "Rohan Singh", profession: "Software Engineer", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=160&q=80", location: "Delhi, India", teach: ["Guitar", "Music Theory"], learn: "Public Speaking" },
-  { name: "Ananya Das", profession: "Home Chef", avatar: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=160&q=80", location: "Mumbai, India", teach: ["Cooking", "Baking"], learn: "Photography" },
-];
+const defaultAvatar = "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -56,10 +51,17 @@ export default function DashboardPage() {
   if (authLoading) return <div className="dashboard-loading">Loading your workspace...</div>;
 
   const displayName = user?.profile?.full_name?.split(" ")[0] || user?.username || "Learner";
-  const people = matches.length ? matches.map((match) => ({ name: match.user.full_name, profession: match.user.profession, avatar: match.user.avatar_url || demoMatches[0].avatar, location: [match.user.city, match.user.country].filter(Boolean).join(", "), teach: match.teach_matches, learn: match.learn_matches[0] || "A new skill" })) : demoMatches;
-  const pendingCount = requests.length || 3;
-  const sessionCount = sessions.length || 2;
-  const progress = 68;
+  const people = matches.map((match) => ({
+    name: match.user.full_name,
+    profession: match.user.profession,
+    avatar: match.user.avatar_url || defaultAvatar,
+    location: [match.user.city, match.user.country].filter(Boolean).join(", "),
+    teach: match.teach_matches,
+    learn: match.learn_matches[0] || "A new skill",
+  }));
+  const pendingCount = requests.length;
+  const sessionCount = sessions.length;
+  const progress = 0;
 
   return (
     <div className="dashboard-shell">
@@ -74,23 +76,23 @@ export default function DashboardPage() {
           <DashboardNavLink href="/sessions" icon={CalendarDays} label="Sessions" />
           <DashboardNavLink href="/progress" icon={TrendingUp} label="Progress" />
           <DashboardNavLink href="/reviews" icon={Star} label="Reviews" />
-          <DashboardNavLink href="/notifications" icon={Bell} label="Notifications" badge={unread || 5} />
+          <DashboardNavLink href="/notifications" icon={Bell} label="Notifications" badge={unread || undefined} />
           <DashboardNavLink href="/settings" icon={Settings} label="Settings" />
         </nav>
       </aside>
 
       <main className="dashboard-main">
-        <header className="dashboard-topbar"><button className="dashboard-menu" onClick={() => setMenuOpen(true)} aria-label="Open navigation"><Menu /></button><form className="dashboard-search" onSubmit={handleDashboardSearch} role="search"><Search /><input value={dashboardSearch} onChange={(event) => setDashboardSearch(event.target.value)} placeholder="Search for skills, people or topics..." aria-label="Search for skills, people or topics" /><button type="submit" aria-label="Search"><ArrowRightSmall /></button></form><div className="dashboard-user-actions"><Link href="/notifications" className="dashboard-bell" aria-label="Open notifications" title="Notifications"><Bell />{unread > 0 && <i />}{unread > 0 && <b>{unread}</b>}</Link><Link href={`/profile/${user?.username || "me"}`} className="dashboard-user" aria-label="Open profile"><img src={user?.profile?.avatar_url || demoMatches[1].avatar} alt="" /><span><strong>Hi, {displayName}!</strong><small>Keep learning ✨</small></span><ChevronRight /></Link></div></header>
+        <header className="dashboard-topbar"><button className="dashboard-menu" onClick={() => setMenuOpen(true)} aria-label="Open navigation"><Menu /></button><form className="dashboard-search" onSubmit={handleDashboardSearch} role="search"><Search /><input value={dashboardSearch} onChange={(event) => setDashboardSearch(event.target.value)} placeholder="Search for skills, people or topics..." aria-label="Search for skills, people or topics" /><button type="submit" aria-label="Search"><ArrowRightSmall /></button></form><div className="dashboard-user-actions"><Link href="/notifications" className="dashboard-bell" aria-label="Open notifications" title="Notifications"><Bell />{unread > 0 && <i />}{unread > 0 && <b>{unread}</b>}</Link><Link href={`/profile/${user?.username || "me"}`} className="dashboard-user" aria-label="Open profile"><img src={user?.profile?.avatar_url || defaultAvatar} alt="" /><span><strong>Hi, {displayName}!</strong><small>Keep learning ✨</small></span><ChevronRight /></Link></div></header>
 
         <div className="dashboard-content">
           <section className="dashboard-welcome"><div><p className="dashboard-kicker">Welcome back,</p><h1>{displayName}!</h1><p>Keep learning. Keep sharing. Keep growing.</p><blockquote>“Small skills create big opportunities.”</blockquote></div><div className="welcome-art"><div className="welcome-orb" /><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=420&q=85" alt="" /></div></section>
 
-          <section className="dashboard-metrics"><Metric icon={Users} value="12" label="Skill Matches" tone="blue" href="/matches" /><Metric icon={Send} value={pendingCount.toString()} label="Pending Requests" tone="pink" href="/requests" /><Metric icon={CalendarDays} value={sessionCount.toString()} label="Upcoming Sessions" tone="green" href="/sessions" /><Metric icon={TrendingUp} value={`${progress}%`} label="Learning Progress" tone="violet" href="/progress" /></section>
+          <section className="dashboard-metrics"><Metric icon={Users} value={String(matches.length)} label="Skill Matches" tone="blue" href="/matches" /><Metric icon={Send} value={pendingCount.toString()} label="Pending Requests" tone="pink" href="/requests" /><Metric icon={CalendarDays} value={sessionCount.toString()} label="Upcoming Sessions" tone="green" href="/sessions" /><Metric icon={TrendingUp} value={`${progress}%`} label="Learning Progress" tone="violet" href="/progress" /></section>
 
-          <div className="dashboard-grid"><section className="dashboard-section recommended"><SectionHeading title="Recommended for You" subtitle="People who match your interests and skills" href="/explore" /><div className="match-grid">{people.map((person) => <article className="match-card" key={person.name}><div className="match-avatar"><img src={person.avatar} alt="" /><button aria-label={`Save ${person.name}`}><Star /></button></div><h3>{person.name}</h3><p className="match-location"><CircleUserRound /> {person.location || "India"}</p><small>Teaches</small><div className="tag-row">{person.teach.slice(0, 2).map((skill) => <span key={skill}>{skill}</span>)}</div><small>Wants to Learn</small><div className="tag-row"><span className="learn-tag">{person.learn}</span></div><Link href="/explore" className="connect-button">Connect</Link></article>)}</div></section>
+          <div className="dashboard-grid"><section className="dashboard-section recommended"><SectionHeading title="Recommended for You" subtitle="People who match your interests and skills" href="/explore" />{people.length ? <div className="match-grid">{people.map((person) => <article className="match-card" key={person.name}><div className="match-avatar"><img src={person.avatar} alt="" /><button aria-label={`Save ${person.name}`}><Star /></button></div><h3>{person.name}</h3><p className="match-location"><CircleUserRound /> {person.location || "Location not added"}</p><small>Teaches</small><div className="tag-row">{person.teach.slice(0, 2).map((skill) => <span key={skill}>{skill}</span>)}</div><small>Wants to Learn</small><div className="tag-row"><span className="learn-tag">{person.learn}</span></div><Link href="/explore" className="connect-button">Connect</Link></article>)}</div> : <div className="dashboard-empty-state"><p>No matches are available yet. Start exploring profiles to build your network.</p></div>}</section>
             <aside className="dashboard-right"><ProgressCard progress={progress} /><GoalsCard /></aside></div>
 
-          <div className="dashboard-bottom-grid"><section className="dashboard-section"><SectionHeading title="Upcoming Sessions" href="/sessions" /><div className="session-list">{(sessions.length ? sessions : [{ id: "demo-1", title: "Python for Data Analysis", skill_name: "Python", scheduled_by_name: "Arjun Mehta", date_time: "2026-09-18T18:00:00", duration_minutes: 60 } as LearningSession, { id: "demo-2", title: "Cooking Basics", skill_name: "Cooking", scheduled_by_name: "Ananya Das", date_time: "2026-09-18T17:00:00", duration_minutes: 60 } as LearningSession]).map((session) => <div className="session-row" key={session.id}><div className="session-icon"><BookOpen /></div><div><strong>{session.title}</strong><p>with {session.scheduled_by_name}</p><small><Clock3 /> {new Date(session.date_time).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} · {session.duration_minutes} min</small></div><Link href="/sessions">Join</Link></div>)}</div></section><section className="dashboard-section messages"><SectionHeading title="Recent Messages" href="/chat" /><div>{(conversations.length ? conversations : [{ id: "demo-3", partner_name: "Ishita Roy", partner_avatar: demoMatches[1].avatar, last_message: "That sounds great! Let's schedule a session...", last_message_time: "10:24 AM", unread_count: 2 }, { id: "demo-4", partner_name: "Rohan Singh", partner_avatar: demoMatches[2].avatar, last_message: "Sure! I can help you with that. 😊", last_message_time: "Yesterday", unread_count: 0 }] as Conversation[]).map((conversation) => <Link href={`/chat/${conversation.id}`} className="message-row" key={conversation.id}><img src={conversation.partner_avatar || demoMatches[0].avatar} alt="" /><span><strong>{conversation.partner_name}</strong><small>{conversation.last_message}</small></span><time>{conversation.last_message_time}</time>{conversation.unread_count > 0 && <b>{conversation.unread_count}</b>}</Link>)}</div></section></div>
+          <div className="dashboard-bottom-grid"><section className="dashboard-section"><SectionHeading title="Upcoming Sessions" href="/sessions" />{sessions.length ? <div className="session-list">{sessions.map((session) => <div className="session-row" key={session.id}><div className="session-icon"><BookOpen /></div><div><strong>{session.title}</strong><p>with {session.scheduled_by_name}</p><small><Clock3 /> {new Date(session.date_time).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} · {session.duration_minutes} min</small></div><Link href="/sessions">Join</Link></div>)}</div> : <div className="dashboard-empty-state compact"><p>No upcoming sessions yet.</p></div>}</section><section className="dashboard-section messages"><SectionHeading title="Recent Messages" href="/chat" /><div>{conversations.length ? conversations.map((conversation) => <Link href={`/chat/${conversation.id}`} className="message-row" key={conversation.id}><img src={conversation.partner_avatar || defaultAvatar} alt="" /><span><strong>{conversation.partner_name}</strong><small>{conversation.last_message}</small></span><time>{conversation.last_message_time}</time>{conversation.unread_count > 0 && <b>{conversation.unread_count}</b>}</Link>) : <div className="dashboard-empty-state compact"><p>No recent conversations yet.</p></div>}</div></section></div>
         </div>
       </main>
     </div>

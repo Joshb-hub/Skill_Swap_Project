@@ -1,35 +1,402 @@
-# Implementation Plan: SkillSwap - Peer-to-Peer Skill Exchange Platform
+# SkillSwap — Peer-to-Peer Skill Exchange Platform
 
-SkillSwap is a secure peer-to-peer skill exchange platform allowing users to teach skills they know and learn skills from other users. The platform automatically computes compatibility between reciprocal teaching/learning interests (e.g. User A teaches Python & wants Graphic Design; User B teaches Graphic Design & wants Python), provides an explore directory with deep multi-attribute filtering, facilitates request lifecycles, and enables real-time WebSocket chat, session scheduling, milestone progress tracking, reviews, and robust user safety controls.
+> **Learn. Teach. Exchange. Grow Together.**
 
-## User Review Required
+SkillSwap is a peer-to-peer skill exchange platform that connects people who want to **teach the skills they know and learn the skills they want**.
 
-> [!IMPORTANT]
-> **Database & Infrastructure Execution Strategy:**
-> - The primary production stack is **PostgreSQL + Redis + FastAPI + Next.js**.
-> - Since Docker is not currently installed on the host environment, we will implement the backend database layer with **SQLAlchemy 2.0 async engine** supporting PostgreSQL (`postgresql+asyncpg://...`) in production, with seamless zero-configuration local fallback to SQLite async (`sqlite+aiosqlite:///./skillswap.db`).
-> - Similarly, the rate limiting and WebSocket pub/sub layer connects to Redis if available (`redis://...`), but automatically falls back to an in-memory thread-safe state manager if Redis is not running locally.
-> - A `docker-compose.yml` file is provided for instant containerized deployment with PostgreSQL and Redis.
-> - This ensures **100% production readiness** without blocking local execution or testing on Windows.
-
-> [!NOTE]
-> **Contact Privacy System:**
-> Strict backend privacy enforcement guarantees that email addresses and phone numbers are never exposed in public search results or public profiles. Users configure privacy settings (`HIDDEN`, `VISIBLE_AFTER_ACCEPTANCE`, `VISIBLE_WITH_PERMISSION`), which are evaluated server-side when generating profile payloads.
+Instead of traditional course-based learning, SkillSwap enables users to find compatible learning partners, exchange skills, communicate in real time, schedule sessions, track learning progress, and build meaningful connections.
 
 ---
 
-## Proposed Changes & Architecture
+## 1. What is SkillSwap?
 
+The core idea is simple:
+
+**You teach what you know → You learn what you want.**
+
+For example:
+
+- Person A knows **Web Development** and wants to learn **Graphic Design**.
+- Person B knows **Graphic Design** and wants to learn **Web Development**.
+- SkillSwap identifies the compatible exchange.
+- They can connect, chat, schedule sessions, learn together, and track their progress.
+
+The application is designed around the complete journey:
+
+```text
+Authentication
+      ↓
+Profile Setup
+      ↓
+Skills & Preferences
+      ↓
+Explore People
+      ↓
+Skill Matching
+      ↓
+Swap Request
+      ↓
+Accepted Skill Swap
+      ↓
+Chat + Sessions + Goals
+      ↓
+Progress Tracking
+      ↓
+Reviews
 ```
+
+---
+
+# 2. Key Features
+
+### User & Authentication
+
+- Sign up
+- Sign in
+- Account recovery
+- Email/account verification
+- User profile creation
+- Profile editing
+- Custom FastAPI JWT authentication
+- Password hashing using Argon2 / bcrypt
+- PostgreSQL-backed user storage and protected routes
+
+### Skill Discovery
+
+- Search for skills
+- Browse skill categories
+- Search users
+- Filter users
+- View public profiles
+- View skills users can teach
+- View skills users want to learn
+
+### Skill Matching
+
+- Find compatible users
+- Match teaching and learning interests
+- Display match scores
+- Display match explanations
+- Explore recommended learning partners
+
+### Skill Swap Requests
+
+- Send swap request
+- Receive requests
+- View sent requests
+- Accept request
+- Decline request
+- Cancel request
+- Create an active skill swap after acceptance
+
+### Active Skill Swap
+
+An active swap brings the two users together in one learning workspace.
+
+It includes:
+
+- Partner profile
+- Skill exchange information
+- Shared goals
+- Chat
+- Sessions
+- Learning progress
+- Milestones
+- Resources
+- Reviews
+
+### Real-Time Chat
+
+- Conversation list
+- Message history
+- Real-time messaging
+- WebSocket communication
+- Read/unread state
+- File/image/resource attachments
+- Partner profile information
+
+### Learning Sessions
+
+- Schedule sessions
+- View upcoming sessions
+- View past sessions
+- Reschedule sessions
+- Cancel sessions
+- Add meeting links
+- Add notes
+- Track session status
+
+### Learning Progress
+
+- Track progress percentage
+- Track completed sessions
+- Track total sessions
+- Create milestones
+- Mark milestones as completed
+- Track current skill level
+- Track target skill level
+
+### Reviews & Ratings
+
+- Review skill-exchange partners
+- Communication rating
+- Teaching rating
+- Helpfulness rating
+- Overall rating
+- Review comments
+- View received reviews
+- View reviews given
+
+### Notifications
+
+- Swap request notifications
+- Chat notifications
+- Session notifications
+- Review notifications
+- Mark individual notifications as read
+- Mark all notifications as read
+
+### Privacy & Safety
+
+- Profile visibility controls
+- Email privacy controls
+- Phone privacy controls
+- Online status visibility
+- Learning activity visibility
+- Review visibility
+- Profile indexing control
+- Block users
+- Unblock users
+- Report users
+- Change password
+- Login/security controls
+
+### Responsive Interface
+
+The UI is designed for:
+
+- Desktop
+- Tablet
+- Mobile
+
+---
+
+# 3. How SkillSwap Works
+
+```text
+                    ┌──────────────────┐
+                    │      Sign In     │
+                    └────────┬─────────┘
+                             ↓
+                    ┌──────────────────┐
+                    │ Complete Profile │
+                    └────────┬─────────┘
+                             ↓
+                 ┌─────────────────────────┐
+                 │ Add Skills & Preferences│
+                 └────────────┬────────────┘
+                              ↓
+                    ┌──────────────────┐
+                    │  Explore People  │
+                    └────────┬─────────┘
+                             ↓
+                    ┌──────────────────┐
+                    │ Find a Match     │
+                    └────────┬─────────┘
+                             ↓
+                    ┌──────────────────┐
+                    │ Send Swap Request│
+                    └────────┬─────────┘
+                             ↓
+                    ┌──────────────────┐
+                    │ Request Accepted │
+                    └────────┬─────────┘
+                             ↓
+                    ┌──────────────────┐
+                    │  Active Skill    │
+                    │      Swap        │
+                    └────────┬─────────┘
+                             ↓
+          ┌──────────────────┼──────────────────┐
+          ↓                  ↓                  ↓
+       Chat              Sessions           Progress
+          │                  │                  │
+          └──────────────────┼──────────────────┘
+                             ↓
+                    ┌──────────────────┐
+                    │ Complete Learning│
+                    └────────┬─────────┘
+                             ↓
+                    ┌──────────────────┐
+                    │ Review & Continue│
+                    └──────────────────┘
+```
+
+---
+
+# 4. Technology Stack
+
+## Frontend
+
+| Technology | Purpose |
+|---|---|
+| Next.js | Frontend framework and routing |
+| React | UI components |
+| TypeScript | Type-safe frontend development |
+| Tailwind CSS | Styling and responsive UI |
+| lucide-react | UI icons |
+| Fetch API | Backend API communication |
+
+## Backend
+
+| Technology | Purpose |
+|---|---|
+| Python | Backend programming language |
+| FastAPI | REST API framework |
+| Pydantic | Request/response validation |
+| SQLAlchemy | ORM and database access |
+| Alembic | Database migrations |
+| Pytest | Backend testing |
+| WebSockets | Real-time communication |
+
+## Database & Infrastructure
+
+| Technology | Purpose | Development Direction |
+|---|---|---|
+| SQLite | Local development/fallback database | Available locally |
+| PostgreSQL | Production application database | Production target |
+| Redis | Caching, rate limiting and temporary state | Add/use when required |
+| WebSockets | Real-time chat | Backend structure exists |
+
+## Authentication
+
+| Technology | Purpose |
+|---|---|
+| FastAPI JWT | Identity and authentication |
+| PostgreSQL | Persistent user data and profile storage |
+| Argon2 / bcrypt | Password hashing |
+
+### Important
+
+SkillSwap owns the authentication flow locally and stores a single application-managed user record in PostgreSQL.
+
+The custom auth flow manages:
+
+- Sign up
+- Sign in
+- Password management
+- Account recovery
+- Email verification
+
+PostgreSQL stores the **SkillSwap user account, profile data, and hashed password**.
+
+The intended flow is:
+
+```text
+User
+ ↓
+Next.js
+ ↓
+FastAPI /auth endpoints
+ ↓
+Validate credentials
+ ↓
+Issue JWT access token
+ ↓
+FastAPI protected routes
+ ↓
+Load local user and profile data
+ ↓
+SkillSwap Dashboard
+```
+
+The custom authentication flow is considered complete when sign-up, sign-in, token validation, logout, and protected-route access are all working and verified.
+
+---
+
+# 5. System Architecture
+
+```text
+                         Browser
+                            │
+                            ▼
+                 ┌─────────────────────┐
+                 │   Next.js / React   │
+                 │      Frontend       │
+                 └──────────┬──────────┘
+                            │
+                ┌───────────┴───────────┐
+                │                       │
+             REST API               WebSocket
+                │                       │
+                ▼                       ▼
+         ┌──────────────────────────────────┐
+         │          FastAPI Backend         │
+         └────────────────┬─────────────────┘
+                          │
+            ┌─────────────┼─────────────┐
+            │             │             │
+            ▼             ▼             ▼
+      ┌──────────┐   ┌──────────┐  ┌─────────────┐
+      │SQLAlchemy│   │  Redis   │  │   Entra     │
+      │   ORM    │   │ Cache /  │  │  External   │
+      └────┬─────┘   │Rate Limit│  │     ID      │
+           │         └──────────┘  └─────────────┘
+           ▼
+   ┌─────────────────┐
+   │ SQLite /         │
+   │ PostgreSQL       │
+   └─────────────────┘
+```
+
+---
+
+# 6. Database Responsibility
+
+PostgreSQL is the intended production source of truth for SkillSwap application data.
+
+The database should contain application information such as:
+
+```text
+users
+profiles
+skills
+skill_categories
+user_skills
+swap_requests
+skill_swaps
+conversations
+messages
+learning_progress
+milestones
+learning_sessions
+reviews
+notifications
+reports
+blocked_users
+privacy_settings
+```
+
+The application database **must not store user passwords** when Entra External ID is used.
+
+---
+
+# 7. Repository Structure
+
+```text
 skill_swap_proj/
+│
 ├── backend/
 │   ├── alembic/
+│   │   └── versions/
+│   │
 │   ├── app/
 │   │   ├── api/
 │   │   │   ├── dependencies/
 │   │   │   │   ├── auth.py
 │   │   │   │   ├── database.py
 │   │   │   │   └── rate_limiter.py
+│   │   │   │
 │   │   │   └── routes/
 │   │   │       ├── auth.py
 │   │   │       ├── users.py
@@ -47,215 +414,1012 @@ skill_swap_proj/
 │   │   │       ├── notifications.py
 │   │   │       ├── settings.py
 │   │   │       └── reports.py
+│   │   │
 │   │   ├── core/
 │   │   │   ├── config.py
 │   │   │   ├── database.py
 │   │   │   └── security.py
+│   │   │
 │   │   ├── models/
-│   │   │   └── __init__.py (all SQLAlchemy 2.0 models)
 │   │   ├── schemas/
-│   │   │   └── __init__.py (all Pydantic v2 schemas)
 │   │   ├── services/
-│   │   │   ├── auth_service.py
-│   │   │   ├── matching_service.py
-│   │   │   ├── privacy_service.py
-│   │   │   ├── chat_service.py
-│   │   │   └── notification_service.py
-│   │   ├── websocket/
-│   │   │   ├── connection_manager.py
-│   │   │   └── chat_socket.py
 │   │   ├── utils/
-│   │   │   ├── seed_data.py
-│   │   │   └── security_logger.py
+│   │   ├── websocket/
 │   │   └── main.py
+│   │
 │   ├── tests/
-│   │   ├── conftest.py
-│   │   ├── test_auth.py
-│   │   ├── test_rate_limiting.py
-│   │   ├── test_matching.py
-│   │   ├── test_privacy.py
-│   │   ├── test_requests.py
-│   │   └── test_chat_authorization.py
+│   ├── uploads/
+│   ├── .env
+│   ├── .env.example
 │   ├── alembic.ini
+│   ├── pytest.ini
 │   ├── requirements.txt
-│   └── .env.example
+│   └── skillswap.db
+│
 ├── frontend/
 │   ├── app/
-│   │   ├── layout.tsx
-│   │   ├── page.tsx (Home / Landing)
-│   │   ├── login/page.tsx
-│   │   ├── signup/page.tsx
-│   │   ├── verify-email/page.tsx
-│   │   ├── forgot-password/page.tsx
-│   │   ├── reset-password/page.tsx
-│   │   ├── explore/page.tsx (Directory, Search, Filters)
-│   │   ├── matches/page.tsx (AI/Python Match Recommendations)
-│   │   ├── profile/[username]/page.tsx
-│   │   ├── profile/edit/page.tsx
-│   │   ├── requests/page.tsx (Sent & Received Swaps)
-│   │   ├── swaps/page.tsx (Active Swaps)
-│   │   ├── chat/
-│   │   │   ├── page.tsx
-│   │   │   └── [conversationId]/page.tsx
-│   │   ├── progress/page.tsx
-│   │   ├── sessions/page.tsx
-│   │   ├── reviews/page.tsx
-│   │   ├── notifications/page.tsx
-│   │   └── settings/page.tsx (Privacy & Security)
 │   ├── components/
-│   │   ├── ui/ (Button, Input, Card, Badge, Modal, Tabs, Avatar, Dropdown, Toast, Alert)
-│   │   ├── layout/ (Navbar, Footer, Sidebar, UserMenu)
-│   │   ├── profile/ (ProfileCard, SkillBadge, ContactPrivacyBadge)
-│   │   ├── skills/ (SkillPicker, SkillFormModal)
-│   │   ├── chat/ (ChatWindow, MessageBubble, TypingIndicator, PartnerSidebarPopup, AttachmentModal)
-│   │   ├── dashboard/ (StatCard, MatchCard, UpcomingSessionCard)
-│   │   └── requests/ (RequestCard, RequestModal)
-│   ├── hooks/ (useAuth, useChat, useNotifications, useDebounce)
-│   ├── lib/ (utils, cn)
-│   ├── services/ (apiClient, authService, userService, skillService, matchService, chatService, swapService)
-│   ├── types/ (index.ts)
+│   ├── hooks/
+│   ├── lib/
+│   ├── services/
+│   ├── types/
 │   ├── package.json
+│   ├── package-lock.json
 │   ├── tsconfig.json
 │   ├── tailwind.config.js
-│   └── .env.example
-├── docker-compose.yml
+│   └── next.config.js
+│
+├── skill_swap_web_images/
+├── uploads/
+├── .gitignore
+├── implementation_plan_skill_swap.md
+├── skill_swap_project_requirements.md
 └── README.md
 ```
 
 ---
 
-### Backend Components
+# 8. Important Files
 
-#### 1. Core & Database (`backend/app/core/`, `backend/app/models/`)
-- **SQLAlchemy 2.0 Declarative Models**:
-  - `User`: id, email, username, hashed_password, is_active, is_verified, verification_token, role, created_at, updated_at
-  - `Profile`: user_id, full_name, date_of_birth, phone_number, country, state, city, profession, bio, languages (JSON/Array), availability (JSON/Array), preferred_learning_mode (ONLINE, IN_PERSON, EITHER), avatar_url, email_privacy, phone_privacy
-  - `SkillCategory`: id, name, slug, description, icon
-  - `Skill`: id, category_id, name, description
-  - `UserSkill`: id, user_id, skill_id, skill_type (TEACH, LEARN), experience_level (BEGINNER, INTERMEDIATE, ADVANCED, PROFESSIONAL), current_level, target_level, description
-  - `SkillSwapRequest`: id, sender_id, receiver_id, offered_skill_id, requested_skill_id, message, status (PENDING, ACCEPTED, DECLINED, CANCELLED)
-  - `SkillSwap`: id, request_id, user_a_id, user_b_id, skill_a_id, skill_b_id, status (ACTIVE, COMPLETED, CANCELLED)
-  - `Conversation`: id, swap_id, user_a_id, user_b_id, is_active
-  - `Message`: id, conversation_id, sender_id, content, message_type (TEXT, LINK, RESOURCE, FILE, IMAGE), file_url, is_read, read_at
-  - `LearningGoal` & `LearningProgress`: progress_percentage, milestones, completed_sessions, total_sessions
-  - `ProgressMilestone`: id, progress_id, title, description, status (COMPLETED, IN_PROGRESS, UPCOMING)
-  - `LearningSession`: id, swap_id, scheduled_by_id, skill_id, title, date_time, duration_minutes, notes, meeting_link, status (UPCOMING, COMPLETED, CANCELLED)
-  - `Review`: id, swap_id, reviewer_id, reviewee_id, communication_rating, teaching_rating, helpfulness_rating, overall_rating, comment
-  - `Notification`: id, user_id, type, title, message, link, is_read
-  - `UserBlock` & `UserReport`: blocker_id, blocked_id, category, description, status
-  - `LoginAttempt`: ip_address, identifier, successful, attempted_at
-  - `RefreshToken`: user_id, token_hash, expires_at, revoked
+### Frontend
 
-#### 2. Authentication & Rate Limiting (`backend/app/core/security.py`, `backend/app/services/auth_service.py`, `backend/app/api/dependencies/rate_limiter.py`)
-- Password hashing with **Argon2 / bcrypt**.
-- Short-lived JWT Access Tokens (15 min) + secure Refresh Token rotation (7 days).
-- In-memory / Redis Brute-Force Rate Limiter:
-  - Tracks failed attempts per identifier/IP.
-  - After 10 consecutive failures within a 15-minute window, throttles/locks further attempts for 15 minutes.
-  - Generic non-disclosing error messages (`Invalid credentials`).
-  - Clears failure count upon successful login.
-- Email verification flow with token generation, verification endpoint, and resend limit.
-
-#### 3. Python Skill Matching Engine (`backend/app/services/matching_service.py`)
-- Implements reciprocal compatibility scoring:
-  - **Reciprocal Skills Match (50%)**: User A teaches what User B wants AND User B teaches what User A wants.
-  - **One-way Skills Match (25%)**: User A wants what User B teaches.
-  - **Experience Level Alignment (10%)**: Teacher level is equal or higher than learner target.
-  - **Learning Mode Match (10%)**: Mutual support for Online or In Person.
-  - **Availability Overlap (5%)**: Shared weekday/weekend/time slots.
-- Returns `match_score` (0-100%), matching skill list, and human-readable explanation (e.g. *"92% Match: You can teach Python, which Alex wants to learn. Alex can teach Graphic Design, which you want to learn."*).
-
-#### 4. Contact Privacy System (`backend/app/services/privacy_service.py`)
-- Sanitizes user profile representations before returning them over the wire.
-- Never outputs email or phone number in search, matches, or public profile endpoints.
-- Evaluates `email_privacy` and `phone_privacy` settings (`HIDDEN`, `VISIBLE_AFTER_ACCEPTANCE`, `VISIBLE_WITH_PERMISSION`):
-  - In accepted swap / active conversation: displays contact details only if the partner's privacy level is `VISIBLE_AFTER_ACCEPTANCE` or explicit consent granted.
-
-#### 5. Real-Time Chat & WebSocket (`backend/app/websocket/`, `backend/app/api/routes/conversations.py`)
-- WebSocket endpoint: `/ws/chat/{conversation_id}`.
-- Handshake token authentication & strict conversation participant verification.
-- Messages persisted directly into PostgreSQL/DB with status tracking.
-- Typing indicator and online presence broadcasting.
-- Chat Profile Popup support delivering reciprocal skill exchanges, goals, sessions, and conditionally shared contact info.
-- Safe file upload handling with validation for mime-types, size limits, and sanitized filenames.
-
-#### 6. Database Seeder (`backend/app/utils/seed_data.py`)
-- High-quality realistic seed dataset covering:
-  - 10 diverse skill categories (Tech, Design, Languages, Music, Trades, Cooking, Business, Arts, Fitness, Academics).
-  - 30+ skills.
-  - 8 diverse demo users with pre-configured teaching/learning skills, profiles, locations, availability, and active swaps to demonstrate matching, chat, sessions, milestones, and reviews right out of the box!
-
----
-
-### Frontend Components
-
-#### 1. Modern Next.js 14 + Tailwind UI Architecture
-- Reusable UI kit: Buttons, Inputs, Cards, Badges, Modals, Tabs, Avatars, Dropdowns, Toast notifications, Progress bars, Star ratings.
-- Responsive Navigation with mobile menu, notification bell with unread badge count, user profile dropdown, and active links.
-
-#### 2. Pages & User Flows
-- **Landing Page (`/`)**: Hero banner, Interactive demo search preview, How it works, Top skill categories, Reciprocal matching showcase, Testimonials.
-- **Sign Up (`/signup`)**: Complete form with all required fields (Name, Username, DOB, Email, Phone, Passwords, Location, Profession, Bio, Terms/Privacy), password strength indicator, and instant validation.
-- **Email Verification (`/verify-email`)**: Confirmation state with resend action.
-- **Login (`/login`)**: Email/Username input, show/hide password toggle, remember me, forgot password link, states for invalid credentials, lockout countdown timer, unverified notice.
-- **Explore People (`/explore`)**:
-  - Live search bar (Skill, Name, Profession, Location, Category).
-  - Multi-faceted filter sidebar: Experience levels, Location, Profession, Availability, Learning Mode, Age range, Sorting (Best Match, Most Relevant, Most Experienced, Newest).
-  - User cards showing avatar, name, profession, location, skills to teach, skills to learn, experience badges, availability, and "Request Swap" action.
-- **Skill Matching Showcase (`/matches`)**: Displays top mutual skill exchange recommendations with match percentage badges and detailed explanation blocks.
-- **User Profile (`/profile/[username]` & `/profile/edit`)**:
-  - Comprehensive profile layout with bio, location, languages, learning mode, availability.
-  - "Skills I Can Teach" & "Skills I Want to Learn" management with interactive modal forms.
-  - Privacy settings section for Email & Phone.
-- **Swap Requests (`/requests`)**:
-  - Sent Requests & Received Requests tabs.
-  - Action buttons: Accept (creates swap + conversation), Decline, Cancel.
-- **Real-Time Chat (`/chat`, `/chat/[conversationId]`)**:
-  - Split view with conversation sidebar (unread counts, online dots, last message preview).
-  - Active chat window with message bubbles, date separators, timestamps, typing indicators, attachment uploads.
-  - **Partner Profile Popup**: Side-drawer / modal displaying: My Skills vs Partner Skills in this swap, Learning Goals, Current Progress %, Upcoming Sessions, and contact info (if permitted).
-- **Learning Sessions (`/sessions`)**:
-  - Session scheduler modal: Date, Time, Duration, Skill, Meeting link, Notes.
-  - Filter by Upcoming, Completed, Cancelled. Reschedule & Cancel actions.
-- **Progress Tracking (`/progress`)**:
-  - Active swaps overview with visual progress bars.
-  - Milestones checklist (Completed, In Progress, Upcoming) with toggle and add milestone capabilities.
-- **Reviews & Ratings (`/reviews`)**:
-  - Review modal with 4 sub-ratings (Communication, Teaching Quality, Helpfulness, Overall) + text feedback.
-- **Safety & Settings (`/settings`)**:
-  - Privacy controls for contact visibility.
-  - Blocked users list with unblock button.
-  - Report user trigger.
-
----
-
-## Verification Plan
-
-### Automated Tests
-Run pytest in the `backend/` directory:
-```powershell
-python -m pytest backend/tests -v
+```text
+frontend/app/
 ```
-Test suite will cover:
-1. `test_auth.py`: Registration, Password Hashing, Login, Token Refresh, Email verification.
-2. `test_rate_limiting.py`: 10 consecutive failed logins trigger lockout and generic error.
-3. `test_matching.py`: Reciprocal skill matching algorithm calculations and explanations.
-4. `test_privacy.py`: Contact privacy verification (emails and phone numbers hidden in public routes, revealed conditionally on accepted swaps).
-5. `test_requests.py`: Swap request lifecycle (Pending -> Accepted/Declined, duplicate prevention, self-request prevention).
-6. `test_chat_authorization.py`: Access control prevents unauthorized users from opening or messaging conversations they do not belong to.
 
-### Manual / End-to-End Verification
-1. Run backend server with `uvicorn app.main:app --port 8000`.
-2. Seed initial data using `python -m app.utils.seed_data`.
-3. Verify OpenAPI documentation at `http://localhost:8000/docs`.
-4. Run frontend with `npm run build` & `npm run dev`.
-5. Test end-to-end user journey in browser:
-   - Login as demo user
-   - Explore skills directory and apply filters
-   - Check AI/Python match recommendations
-   - Send skill swap request
-   - Switch user and accept request
-   - Open real-time chat, test WebSocket communication, inspect partner profile popup
-   - Schedule a learning session and update milestone progress
-   - Leave a 5-star review
-   - Test login lockout security by attempting 10 invalid password attempts.
+Contains Next.js pages/routes.
+
+```text
+frontend/components/
+```
+
+Reusable UI components.
+
+```text
+frontend/services/
+```
+
+Frontend API service functions used to communicate with FastAPI.
+
+```text
+frontend/types/
+```
+
+TypeScript interfaces and application types.
+
+```text
+frontend/hooks/
+```
+
+Reusable React hooks.
+
+```text
+frontend/lib/
+```
+
+Shared frontend utilities and configuration.
+
+---
+
+### Backend
+
+```text
+backend/app/main.py
+```
+
+Main FastAPI application entry point.
+
+```text
+backend/app/api/routes/
+```
+
+REST API endpoints grouped by feature.
+
+```text
+backend/app/api/dependencies/
+```
+
+Shared request dependencies such as authentication, database access and rate limiting.
+
+```text
+backend/app/core/
+```
+
+Application configuration, database configuration and security functionality.
+
+```text
+backend/app/models/
+```
+
+SQLAlchemy database models.
+
+```text
+backend/app/schemas/
+```
+
+Pydantic request and response schemas.
+
+```text
+backend/app/services/
+```
+
+Business logic and reusable backend services.
+
+```text
+backend/app/websocket/
+```
+
+Real-time WebSocket functionality.
+
+```text
+backend/alembic/
+```
+
+Database migration system.
+
+```text
+backend/tests/
+```
+
+Backend tests.
+
+---
+
+# 9. Local Development Requirements
+
+Install the following:
+
+### Required
+
+- Python 3.x
+- Node.js
+- npm
+- Git
+- Microsoft account for Entra configuration
+- Code editor such as VS Code
+
+### Application services
+
+```text
+Frontend
+    ↓
+Next.js
+
+Backend
+    ↓
+FastAPI
+
+Database
+    ↓
+SQLite locally
+PostgreSQL for production
+
+Authentication
+    ↓
+Microsoft Entra External ID
+
+Realtime
+    ↓
+FastAPI WebSockets
+
+Caching / Rate Limiting
+    ↓
+Redis
+```
+
+Docker is optional for local development.
+
+---
+
+# 10. Running the Backend
+
+Open PowerShell.
+
+From the project root:
+
+```powershell
+cd backend
+```
+
+Create a virtual environment if one does not already exist:
+
+```powershell
+python -m venv .venv
+```
+
+Activate it:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+If PowerShell blocks activation:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
+```
+
+Then:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+Install dependencies:
+
+```powershell
+pip install -r requirements.txt
+```
+
+Run migrations:
+
+```powershell
+alembic upgrade head
+```
+
+Start FastAPI:
+
+```powershell
+uvicorn app.main:app --reload
+```
+
+The backend should then be available on the local FastAPI development server.
+
+FastAPI API documentation is normally available at:
+
+```text
+/docs
+```
+
+---
+
+# 11. Running the Frontend
+
+Open a **second PowerShell terminal**.
+
+From the project root:
+
+```powershell
+cd frontend
+```
+
+Install frontend dependencies:
+
+```powershell
+npm install
+```
+
+Start Next.js:
+
+```powershell
+npm run dev
+```
+
+Important:
+
+`npm run dev` must be executed from the directory containing `package.json`.
+
+Correct:
+
+```text
+skill_swap_proj/
+    frontend/
+        package.json
+```
+
+Therefore:
+
+```powershell
+cd frontend
+npm run dev
+```
+
+Running `npm run dev` directly from:
+
+```text
+skill_swap_proj>
+```
+
+will fail if there is no `package.json` in the project root.
+
+---
+
+# 12. Environment Configuration
+
+The project uses environment variables for configuration.
+
+Backend:
+
+```text
+backend/.env
+```
+
+Frontend:
+
+```text
+frontend/.env.local
+```
+
+Never commit these files to GitHub.
+
+Use:
+
+```text
+backend/.env.example
+```
+
+as the template for backend configuration.
+
+Typical configuration categories include:
+
+```text
+Database URL
+Redis URL
+Authentication configuration
+Entra tenant information
+Entra client/application information
+Frontend URL
+Backend URL
+CORS configuration
+JWT/OIDC configuration
+Upload configuration
+```
+
+Actual secrets and credentials must remain local or in the deployment platform's secret manager.
+
+---
+
+# 13. Microsoft Entra External ID Setup
+
+Authentication is one of the areas that requires **manual external configuration**.
+
+The code can be generated or assisted by AI, but the following must be configured and verified by the developer:
+
+1. Microsoft Entra tenant
+2. External ID configuration
+3. Application registration
+4. Redirect URI
+5. Frontend authentication configuration
+6. Client/application identifiers
+7. Tenant/issuer configuration
+8. Required permissions
+9. Token configuration
+10. Backend token validation
+11. Local environment variables
+12. Production environment variables
+13. Real sign-in/sign-up testing
+
+The intended architecture is:
+
+```text
+User
+ ↓
+Next.js
+ ↓
+Microsoft Entra External ID
+ ↓
+OIDC Authentication
+ ↓
+Access/ID Token
+ ↓
+FastAPI
+ ↓
+Token Validation
+ ↓
+Find/Create User
+ ↓
+Create Profile
+ ↓
+Dashboard
+```
+
+Do **not** create a separate password database for SkillSwap.
+
+---
+
+# 14. PostgreSQL Setup
+
+For local development, the existing project can use SQLite where configured.
+
+For production, PostgreSQL should be used.
+
+The application should use:
+
+```text
+SQLAlchemy
+        ↓
+PostgreSQL
+```
+
+with Alembic handling schema migrations.
+
+Typical development process:
+
+```powershell
+alembic upgrade head
+```
+
+Whenever the database schema changes:
+
+```text
+SQLAlchemy Model
+        ↓
+Alembic Migration
+        ↓
+Database
+```
+
+Do not manually modify production database tables without corresponding migrations.
+
+---
+
+# 15. Redis
+
+Redis is intended for:
+
+- Rate limiting
+- Caching
+- Temporary state
+- High-speed application state
+- WebSocket-related infrastructure where required
+
+Redis is not the primary database.
+
+The primary application data remains in PostgreSQL.
+
+For local development, the project may use an in-memory fallback where implemented, allowing development without Redis running.
+
+---
+
+# 16. Authentication vs Application Database
+
+These two systems have different responsibilities.
+
+### Microsoft Entra External ID
+
+Responsible for:
+
+```text
+Identity
+Sign Up
+Sign In
+Password
+Account Recovery
+Authentication
+Identity Verification
+```
+
+### PostgreSQL
+
+Responsible for:
+
+```text
+User application record
+Profile
+Skills
+Preferences
+Swaps
+Requests
+Messages
+Sessions
+Progress
+Milestones
+Reviews
+Notifications
+Privacy
+Safety
+```
+
+The local `users` record should contain the Entra identity reference so SkillSwap can connect the authenticated identity with its application data.
+
+---
+
+# 17. Frontend ↔ Backend Flow
+
+The normal request flow is:
+
+```text
+Next.js Page
+      ↓
+React Component
+      ↓
+Frontend Service
+      ↓
+Fetch API
+      ↓
+FastAPI Route
+      ↓
+Pydantic Validation
+      ↓
+Service / Business Logic
+      ↓
+SQLAlchemy
+      ↓
+Database
+```
+
+For real-time chat:
+
+```text
+Next.js Chat UI
+      ↓
+WebSocket
+      ↓
+FastAPI WebSocket
+      ↓
+Message Service
+      ↓
+Database / Redis
+```
+
+---
+
+# 18. Database-Backed Feature Development
+
+When implementing a new database-backed feature, follow this order:
+
+```text
+Requirement
+    ↓
+Frontend UI
+    ↓
+TypeScript Type
+    ↓
+Frontend Service
+    ↓
+FastAPI Route
+    ↓
+Pydantic Schema
+    ↓
+Business Logic
+    ↓
+SQLAlchemy Model
+    ↓
+Alembic Migration
+    ↓
+Database
+    ↓
+Tests
+    ↓
+End-to-End Verification
+```
+
+Not every feature requires every layer, but all affected layers must remain consistent.
+
+---
+
+# 19. Current Development Principle
+
+When modifying an existing feature:
+
+1. Read the existing implementation.
+2. Understand its original intent.
+3. Inspect the frontend page/component.
+4. Inspect the frontend service.
+5. Inspect the backend route.
+6. Inspect the related model/service.
+7. Preserve existing working behavior.
+8. Implement only the missing functionality.
+9. Run the application.
+10. Test the complete user flow.
+11. Update documentation only after verification.
+
+**Do not replace working code simply because another implementation is possible.**
+
+---
+
+# 20. AI-Assisted Development
+
+AI can assist with:
+
+- React components
+- Next.js pages
+- TypeScript types
+- FastAPI routes
+- Pydantic schemas
+- SQLAlchemy models
+- Services
+- Tests
+- Alembic migrations
+- Debugging
+- Refactoring
+- Documentation
+
+However, the developer must manually control and verify:
+
+- Microsoft/Azure tenant creation
+- Entra application registration
+- Authentication configuration
+- Permissions
+- Redirect URIs
+- Secrets
+- Database credentials
+- Production accounts
+- Deployment credentials
+- DNS/domain configuration
+- Production environment variables
+- Real authentication testing
+- Security decisions
+- Production verification
+
+Generated code does **not** prove that an external service has been configured correctly.
+
+---
+
+# 21. Security Rules
+
+Never commit:
+
+```text
+.env
+.env.local
+Passwords
+API keys
+Client secrets
+Access tokens
+Refresh tokens
+Private certificates
+Database credentials
+```
+
+Use `.gitignore` to prevent accidental commits.
+
+Authentication and authorization must be enforced by the backend.
+
+Do not disable token validation or authorization as a temporary workaround for authentication problems.
+
+---
+
+# 22. Testing
+
+Backend tests are located in:
+
+```text
+backend/tests/
+```
+
+Run:
+
+```powershell
+cd backend
+pytest
+```
+
+Testing should eventually cover:
+
+- Authentication
+- Profile creation/update
+- Skills
+- Search
+- Matching
+- Requests
+- Swaps
+- Chat
+- Sessions
+- Progress
+- Milestones
+- Reviews
+- Notifications
+- Privacy
+- Blocking
+- Reporting
+
+The complete user journey should also be tested through the browser.
+
+---
+
+# 23. End-to-End User Journey
+
+A complete test should verify:
+
+```text
+Create/Login User
+        ↓
+Complete Profile
+        ↓
+Add Teaching Skills
+        ↓
+Add Learning Skills
+        ↓
+Explore Users
+        ↓
+Find Match
+        ↓
+Send Request
+        ↓
+Second User Accepts
+        ↓
+Active Swap Created
+        ↓
+Open Chat
+        ↓
+Send Message
+        ↓
+Schedule Session
+        ↓
+Complete Session
+        ↓
+Update Progress
+        ↓
+Complete Milestone
+        ↓
+Submit Review
+```
+
+---
+
+# 24. Troubleshooting
+
+## `npm run dev` says `package.json` cannot be found
+
+If PowerShell shows:
+
+```text
+skill_swap_proj>
+```
+
+run:
+
+```powershell
+cd frontend
+npm run dev
+```
+
+because `package.json` is inside `frontend/`.
+
+---
+
+## Backend does not start
+
+From `backend/`:
+
+```powershell
+python --version
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+Check:
+
+```text
+backend/.env
+```
+
+if configuration errors occur.
+
+---
+
+## Database errors
+
+Check:
+
+- Database URL
+- Database availability
+- Migration status
+- SQLAlchemy configuration
+
+Then run:
+
+```powershell
+alembic upgrade head
+```
+
+---
+
+## Frontend cannot reach backend
+
+Check:
+
+- Backend is running
+- Frontend API base URL
+- `frontend/.env.local`
+- FastAPI CORS configuration
+- Browser console
+- Backend terminal logs
+
+---
+
+## Authentication errors
+
+Check:
+
+- Entra tenant
+- Application registration
+- Client/application ID
+- Tenant ID
+- Redirect URI
+- Issuer
+- Audience
+- Frontend auth configuration
+- Backend token validation
+- Environment variables
+
+Do not disable authorization or token validation to bypass the problem.
+
+---
+
+# 25. Deployment Direction
+
+The intended production architecture is:
+
+```text
+GitHub
+   ↓
+Vercel
+   ↓
+Next.js Frontend
+   ↓
+Cloud-hosted FastAPI
+   ├── PostgreSQL
+   ├── Redis
+   └── Microsoft Entra External ID
+```
+
+For a student/portfolio project, prefer free tiers or student benefits wherever they are sufficient.
+
+Possible deployment direction:
+
+```text
+Frontend
+→ Vercel Free Tier
+
+Backend
+→ Free/Student-eligible cloud hosting
+
+Database
+→ PostgreSQL free tier / student allowance
+
+Redis
+→ Free tier where available
+
+Authentication
+→ Microsoft Entra External ID / eligible free capabilities
+```
+
+Always verify the current provider limits before deployment.
+
+---
+
+# 26. Project Status
+
+SkillSwap is an actively developed full-stack project.
+
+The frontend UI, backend architecture, service layer, database layer and feature structure are already established to varying degrees.
+
+However, **a technology appearing in the architecture does not automatically mean that its production integration is complete**.
+
+In particular, these areas require explicit verification:
+
+```text
+Microsoft Entra External ID
+        ↓
+Manual tenant/application configuration
+        ↓
+OAuth/OIDC integration
+        ↓
+Frontend authentication
+        ↓
+Backend token validation
+        ↓
+User creation/linking
+        ↓
+Real sign-in/sign-up test
+```
+
+Similarly:
+
+```text
+PostgreSQL
+        ↓
+Production database configuration
+        ↓
+Alembic migrations
+        ↓
+Production connection
+        ↓
+Verification
+```
+
+and:
+
+```text
+Redis
+        ↓
+Connection
+        ↓
+Rate limiting/cache usage
+        ↓
+WebSocket infrastructure where required
+        ↓
+Verification
+```
+
+The project should be considered **fully implemented only after the corresponding user flows have been tested end-to-end**.
+
+---
+
+# 27. Recommended Implementation Order
+
+For continued development, follow this order:
+
+```text
+1. Authentication
+      ↓
+2. User / Profile creation
+      ↓
+3. Skills & Preferences
+      ↓
+4. Explore / Search
+      ↓
+5. Matching
+      ↓
+6. Swap Requests
+      ↓
+7. Active Skill Swap
+      ↓
+8. Chat / WebSockets
+      ↓
+9. Sessions
+      ↓
+10. Learning Progress
+      ↓
+11. Reviews
+      ↓
+12. Notifications
+      ↓
+13. Privacy & Safety
+      ↓
+14. Testing
+      ↓
+15. PostgreSQL production setup
+      ↓
+16. Redis integration
+      ↓
+17. Deployment
+```
+
+---
+
+# 28. Related Documentation
+
+The repository contains separate documentation for different purposes:
+
+```text
+README.md
+    ↓
+Project overview, setup and developer entry point
+
+skill_swap_project_requirements.md
+    ↓
+Functional and product requirements
+
+implementation_plan_skill_swap.md
+    ↓
+Technical implementation plan and development roadmap
+
+INSTRUCTIONS.md
+    ↓
+Detailed developer instructions, project structure,
+configuration, manual setup and development workflow
+```
+
+These documents should serve different purposes rather than duplicating one another.
+
+---
+
+# 29. License
+
+This project is developed for:
+
+- Educational purposes
+- Portfolio demonstration
+- Learning
+- Software engineering practice
+
+No confidential credentials, API keys, passwords, tokens or private configuration should be included in the public repository.
+
+---
+
+## SkillSwap
+
+**Learn. Teach. Exchange. Grow Together.**

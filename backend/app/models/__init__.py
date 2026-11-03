@@ -91,6 +91,15 @@ class User(Base):
     verification_token: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     reset_token: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     reset_token_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    two_factor_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    login_alerts_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    notification_preferences: Mapped[dict] = mapped_column(JSON, default=lambda: {
+        "request_updates": True,
+        "messages": True,
+        "session_updates": True,
+        "reviews": True,
+        "platform_updates": True,
+    })
     role: Mapped[str] = mapped_column(String(20), default="user")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)

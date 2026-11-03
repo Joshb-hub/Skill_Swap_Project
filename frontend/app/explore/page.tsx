@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Profile, SkillCategory } from "@/types";
 import { searchService, skillService } from "@/services";
@@ -12,17 +12,6 @@ import {
   Heart, Languages, MapPin, Menu, Music2, Palette, Search, SlidersHorizontal,
   Sparkles, TrendingUp, Utensils, Users, X
 } from "lucide-react";
-
-const fallbackProfiles: Profile[] = [
-  { user_id: "demo-priya", username: "priya-sharma", full_name: "Priya Sharma", profession: "UX Designer", country: "India", city: "Kolkata", avatar_url: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=600&q=85", languages: ["English"], availability: ["Weekends"], preferred_learning_mode: "Either", skills_teach: [{ id: "p1", skill_id: "p1", skill_name: "UI/UX Design", skill_type: "TEACH" }, { id: "p2", skill_id: "p2", skill_name: "Figma", skill_type: "TEACH" }], skills_learn: [{ id: "p3", skill_id: "p3", skill_name: "Python", skill_type: "LEARN" }], rating_average: 4.9, reviews_count: 32, bio: "Design enthusiast who loves teaching and learning new tech skills!" },
-  { user_id: "demo-arjun", username: "arjun-mehta", full_name: "Arjun Mehta", profession: "Data Analyst", country: "India", city: "Bangalore", avatar_url: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=85", languages: ["English"], availability: ["Evenings"], preferred_learning_mode: "Online", skills_teach: [{ id: "a1", skill_id: "a1", skill_name: "Python", skill_type: "TEACH" }, { id: "a2", skill_id: "a2", skill_name: "Machine Learning", skill_type: "TEACH" }], skills_learn: [{ id: "a3", skill_id: "a3", skill_name: "Guitar", skill_type: "LEARN" }], rating_average: 4.8, reviews_count: 27, bio: "Software engineer who loves open source and helping others learn." },
-  { user_id: "demo-ishita", username: "ishita-roy", full_name: "Ishita Roy", profession: "Product Designer", country: "India", city: "Delhi", avatar_url: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=600&q=85", languages: ["English"], availability: ["Weekdays"], preferred_learning_mode: "Either", skills_teach: [{ id: "i1", skill_id: "i1", skill_name: "Graphic Design", skill_type: "TEACH" }, { id: "i2", skill_id: "i2", skill_name: "Illustration", skill_type: "TEACH" }], skills_learn: [{ id: "i3", skill_id: "i3", skill_name: "Web Development", skill_type: "LEARN" }], rating_average: 4.7, reviews_count: 21, bio: "Turning ideas into visuals and always eager to learn new things!" },
-  { user_id: "demo-rohan", username: "rohan-singh", full_name: "Rohan Singh", profession: "Software Engineer", country: "India", city: "Mumbai", avatar_url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=85", languages: ["English"], availability: ["Evenings"], preferred_learning_mode: "Online", skills_teach: [{ id: "r1", skill_id: "r1", skill_name: "Guitar", skill_type: "TEACH" }, { id: "r2", skill_id: "r2", skill_name: "Music Theory", skill_type: "TEACH" }], skills_learn: [{ id: "r3", skill_id: "r3", skill_name: "Public Speaking", skill_type: "LEARN" }], rating_average: 4.8, reviews_count: 18, bio: "Music keeps me sane. Let’s learn and grow together!" },
-  { user_id: "demo-ananya", username: "ananya-das", full_name: "Ananya Das", profession: "Home Chef", country: "India", city: "Pune", avatar_url: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=600&q=85", languages: ["English"], availability: ["Weekends"], preferred_learning_mode: "Either", skills_teach: [{ id: "n1", skill_id: "n1", skill_name: "Cooking", skill_type: "TEACH" }, { id: "n2", skill_id: "n2", skill_name: "Baking", skill_type: "TEACH" }], skills_learn: [{ id: "n3", skill_id: "n3", skill_name: "Photography", skill_type: "LEARN" }], rating_average: 4.9, reviews_count: 40, bio: "Good food, good vibes, good people!" },
-  { user_id: "demo-kunal", username: "kunal-verma", full_name: "Kunal Verma", profession: "Web Developer", country: "India", city: "Hyderabad", avatar_url: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=600&q=85", languages: ["English"], availability: ["Weekdays"], preferred_learning_mode: "Online", skills_teach: [{ id: "k1", skill_id: "k1", skill_name: "Web Development", skill_type: "TEACH" }, { id: "k2", skill_id: "k2", skill_name: "Next.js", skill_type: "TEACH" }], skills_learn: [{ id: "k3", skill_id: "k3", skill_name: "UI/UX Design", skill_type: "LEARN" }], rating_average: 4.6, reviews_count: 15, bio: "Love building things and meeting people who are curious like me." },
-  { user_id: "demo-sneha", username: "sneha-kapoor", full_name: "Sneha Kapoor", profession: "Communication Coach", country: "India", city: "Chennai", avatar_url: "https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=600&q=85", languages: ["English"], availability: ["Evenings"], preferred_learning_mode: "Either", skills_teach: [{ id: "s1", skill_id: "s1", skill_name: "English", skill_type: "TEACH" }, { id: "s2", skill_id: "s2", skill_name: "Communication", skill_type: "TEACH" }], skills_learn: [{ id: "s3", skill_id: "s3", skill_name: "Spanish", skill_type: "LEARN" }], rating_average: 4.8, reviews_count: 25, bio: "Let’s talk, learn and explore the world through languages!" },
-  { user_id: "demo-aditya", username: "aditya-rao", full_name: "Aditya Rao", profession: "Photographer", country: "India", city: "Jaipur", avatar_url: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=600&q=85", languages: ["English"], availability: ["Weekends"], preferred_learning_mode: "Either", skills_teach: [{ id: "d1", skill_id: "d1", skill_name: "Photography", skill_type: "TEACH" }, { id: "d2", skill_id: "d2", skill_name: "Photo Editing", skill_type: "TEACH" }], skills_learn: [{ id: "d3", skill_id: "d3", skill_name: "Digital Marketing", skill_type: "LEARN" }], rating_average: 4.7, reviews_count: 19, bio: "Capturing moments and learning something new every day." },
-];
 
 const sidebarCategories = [
   "Technology",
@@ -36,6 +25,14 @@ const sidebarCategories = [
 ];
 
 export default function ExplorePage() {
+  return (
+    <Suspense fallback={<div className="explore-page"><div className="explore-empty">Loading explore page...</div></div>}>
+      <ExplorePageContent />
+    </Suspense>
+  );
+}
+
+function ExplorePageContent() {
   const searchParams = useSearchParams();
   const initialQ = searchParams.get("q") || "";
   const initialCategory = searchParams.get("category") || "";
@@ -113,7 +110,7 @@ export default function ExplorePage() {
     selectedProfession || selectedLocation || selectedExp ||
     selectedMode || selectedAvailability
   );
-  const displayProfiles = profiles.length ? profiles : hasActiveFilters ? [] : fallbackProfiles;
+  const displayProfiles = profiles;
 
   return (
     <div className="explore-page">

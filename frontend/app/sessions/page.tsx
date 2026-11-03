@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeft, ArrowRight, ArrowRightLeft, CalendarDays, Check, CheckCircle2, Clock3, MapPin, Plus, RefreshCw, Sparkles, Users, Video, X, XCircle } from "lucide-react";
@@ -17,6 +17,14 @@ const sessionTabs: SessionTab[] = ["Upcoming", "Past", "Cancelled"];
 const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
 export default function SessionsPage() {
+  return (
+    <Suspense fallback={<div className="sessions-dashboard-empty"><CalendarDays /><h1>Loading sessions…</h1></div>}>
+      <SessionsPageContent />
+    </Suspense>
+  );
+}
+
+function SessionsPageContent() {
   const searchParams = useSearchParams();
   const swapIdParam = searchParams.get("swap_id") || "";
   const { isAuthenticated } = useAuth();
