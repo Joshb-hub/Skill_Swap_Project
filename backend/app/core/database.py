@@ -64,6 +64,8 @@ async def ensure_sqlite_schema_compatibility() -> None:
                 "TEXT",
                 "'{\"request_updates\": true, \"messages\": true, \"session_updates\": true, \"reviews\": true, \"platform_updates\": true}'",
             ),
+            ("terms_accepted_at", "DATETIME", "NULL"),
+            ("terms_version", "TEXT", "'2026-11-08'"),
         ]
 
         for column_name, column_type, default_value in column_defs:

@@ -64,6 +64,9 @@ export default function PrivacyPolicyPage() {
           <Link href="/community-guidelines" className="rounded-full border border-slate-300 px-4 py-2 font-medium text-slate-700 hover:border-slate-400 hover:bg-slate-50">
             Community Guidelines
           </Link>
+          <Link href="/safety-guidelines" className="rounded-full border border-slate-300 px-4 py-2 font-medium text-slate-700 hover:border-slate-400 hover:bg-slate-50">
+            Safety Guidelines
+          </Link>
           <Link href="/terms-of-service" className="rounded-full border border-slate-300 px-4 py-2 font-medium text-slate-700 hover:border-slate-400 hover:bg-slate-50">
             Terms of Service
           </Link>

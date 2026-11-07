@@ -59,9 +59,11 @@ export function Navbar() {
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
-                <ArrowRightLeft className="w-5 h-5" />
-              </div>
+              <img
+                src="/skillswap-logo.svg"
+                alt="SkillSwap logo"
+                className="h-9 w-9 object-contain drop-shadow-sm"
+              />
               <span className="font-bold text-xl tracking-tight bg-gradient-to-r from-slate-900 via-indigo-950 to-indigo-700 bg-clip-text text-transparent">
                 SkillSwap
               </span>

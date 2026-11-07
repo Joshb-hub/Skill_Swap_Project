@@ -52,6 +52,7 @@ class Settings(BaseSettings):
     ALLOWED_EXTENSIONS: List[str] = ["jpg", "jpeg", "png", "gif", "webp", "pdf", "docx", "txt"]
 
     FRONTEND_URL: str = "http://localhost:3000"
+    LEGAL_POLICY_VERSION: str = "2026-11-08"
 
 
 settings = Settings()

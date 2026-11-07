@@ -36,7 +36,15 @@ class UserRegister(BaseModel):
     city: Optional[str] = None
     profession: str = Field(..., min_length=2, max_length=100)
     bio: Optional[str] = None
-    accept_terms: bool = True
+    accept_terms: bool = Field(..., description="You must accept the current SkillSwap terms and policies.")
+    terms_version: Optional[str] = Field(default=None, max_length=50)
+
+    @field_validator("accept_terms")
+    @classmethod
+    def validate_accept_terms(cls, v: bool):
+        if not v:
+            raise ValueError("You must accept the Terms of Service, Privacy Policy, and Community Guidelines to create an account.")
+        return v
 
     @field_validator("confirm_password")
     @classmethod
@@ -201,6 +209,8 @@ class UserResponse(BaseModel):
     is_verified: bool
     role: str
     created_at: datetime
+    terms_accepted_at: Optional[datetime] = None
+    terms_version: Optional[str] = None
     profile: Optional[ProfileDetailResponse] = None
 
 

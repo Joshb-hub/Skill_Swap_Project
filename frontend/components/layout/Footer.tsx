@@ -56,6 +56,7 @@ export function Footer() {
             <ul className="space-y-2 text-sm">
               <li><Link href="/settings" className="hover:text-white transition-colors">Privacy Preferences</Link></li>
               <li><Link href="/community-guidelines" className="hover:text-white transition-colors">Community Guidelines</Link></li>
+              <li><Link href="/safety-guidelines" className="hover:text-white transition-colors">Safety Guidelines</Link></li>
               <li><Link href="/terms-of-service" className="hover:text-white transition-colors">Terms of Service</Link></li>
               <li><Link href="/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
             </ul>

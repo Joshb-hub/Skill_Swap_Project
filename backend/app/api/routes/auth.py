@@ -38,12 +38,17 @@ async def register(user_in: UserRegister, db: AsyncSession = Depends(get_db)):
     # Generate verification token
     verification_token = generate_verification_token()
 
+    accepted_at = datetime.now(timezone.utc)
+    accepted_version = user_in.terms_version or settings.LEGAL_POLICY_VERSION
+
     new_user = User(
         email=user_in.email,
         username=user_in.username,
         hashed_password=get_password_hash(user_in.password),
         is_verified=False,
         verification_token=verification_token,
+        terms_accepted_at=accepted_at,
+        terms_version=accepted_version,
         role="user",
     )
     db.add(new_user)

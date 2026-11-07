@@ -42,6 +42,28 @@ async def test_register_and_login_flow(client):
 
 
 @pytest.mark.asyncio
+async def test_register_records_terms_acceptance(client):
+    payload = {
+        "full_name": "Consent Tester",
+        "username": "consenttester",
+        "email": "consenttester@skillswap.com",
+        "password": "Password123!",
+        "confirm_password": "Password123!",
+        "profession": "Product Designer",
+        "country": "United States",
+        "city": "Seattle",
+        "accept_terms": True,
+        "terms_version": "2026-11-08"
+    }
+
+    res = await client.post("/api/auth/register", json=payload)
+    assert res.status_code == 201, res.text
+    body = res.json()
+    assert body["terms_accepted_at"] is not None
+    assert body["terms_version"] == "2026-11-08"
+
+
+@pytest.mark.asyncio
 async def test_password_validation(client):
     # Passwords without special characters or uppercase should be rejected
     invalid_payload = {

@@ -53,6 +53,9 @@ export default function CommunityGuidelinesPage() {
           <Link href="/settings" className="rounded-full bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-800">
             Privacy Preferences
           </Link>
+          <Link href="/safety-guidelines" className="rounded-full border border-slate-300 px-4 py-2 font-medium text-slate-700 hover:border-slate-400 hover:bg-slate-50">
+            Safety Guidelines
+          </Link>
           <Link href="/terms-of-service" className="rounded-full border border-slate-300 px-4 py-2 font-medium text-slate-700 hover:border-slate-400 hover:bg-slate-50">
             Terms of Service
           </Link>
