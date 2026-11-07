@@ -291,7 +291,7 @@ export default function SignUpPage() {
                       className="mt-1 w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                     />
                     <span className="text-xs text-slate-600 leading-relaxed">
-                      I have read and agree to the <Link href="/terms-of-service" className="text-indigo-600 font-medium hover:text-indigo-800">Terms of Service</Link>, <Link href="/privacy-policy" className="text-indigo-600 font-medium hover:text-indigo-800">Privacy Policy</Link>, <Link href="/community-guidelines" className="text-indigo-600 font-medium hover:text-indigo-800">Community Guidelines</Link>, and <Link href="/safety-guidelines" className="text-indigo-600 font-medium hover:text-indigo-800">Safety Guidelines</Link>. I understand my email and phone will only be shared when I choose to do so.
+                      I have read and agree to the <Link href="/terms-of-service" className="text-indigo-600 font-medium hover:text-indigo-800">Terms of Service</Link>, <Link href="/privacy-policy" className="text-indigo-600 font-medium hover:text-indigo-800">Privacy Policy</Link>, <Link href="/community-guidelines" className="text-indigo-600 font-medium hover:text-indigo-800">Community Guidelines</Link>, and <Link href="/safety-center" className="text-indigo-600 font-medium hover:text-indigo-800">Safety Center</Link>. I understand my email and phone will only be shared when I choose to do so.
                     </span>
                   </label>
                 </div>

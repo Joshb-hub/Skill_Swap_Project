@@ -80,7 +80,7 @@ export default function LoginPage() {
             Sign up now
           </Link>
         </p>
-        <p className="auth-legal">By signing in, you agree to our <Link href="/terms-of-service">Terms of Service</Link>, <Link href="/privacy-policy">Privacy Policy</Link>, <Link href="/community-guidelines">Community Guidelines</Link>, and <Link href="/safety-guidelines">Safety Guidelines</Link>.</p>
+        <p className="auth-legal">By signing in, you agree to our <Link href="/terms-of-service">Terms of Service</Link>, <Link href="/privacy-policy">Privacy Policy</Link>, <Link href="/community-guidelines">Community Guidelines</Link>, and <Link href="/safety-center">Safety Center</Link>.</p>
       </div>
     </div>
   );

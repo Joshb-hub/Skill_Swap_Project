@@ -93,7 +93,14 @@ export function Navbar() {
               </div>
             ) : (
               <div className="hidden md:flex items-center ml-20 space-x-7">
-                {[{ href: "/", label: "Home" }, { href: "/explore", label: "Explore" }, { href: "/how-it-works", label: "How It Works" }, { href: "/about", label: "About" }, { href: "/faqs", label: "FAQs" }].map((link) => (
+                {[
+                  { href: "/", label: "Home" },
+                  { href: "/explore", label: "Explore" },
+                  { href: "/community-guidelines", label: "Community" },
+                  { href: "/safety-center", label: "Safety Center" },
+                  { href: "/terms-of-service", label: "Terms" },
+                  { href: "/privacy-policy", label: "Privacy" },
+                ].map((link) => (
                   <Link key={link.href} href={link.href} className={`py-5 text-sm font-medium transition-colors ${pathname === link.href ? "border-b-2 border-violet-600 text-slate-900" : "text-slate-700 hover:text-violet-700"}`}>
                     {link.label}
                   </Link>

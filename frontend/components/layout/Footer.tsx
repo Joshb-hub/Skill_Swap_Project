@@ -55,7 +55,7 @@ export function Footer() {
             <h4 className="text-sm font-semibold text-slate-200 uppercase tracking-wider mb-4">Safety & Terms</h4>
             <ul className="space-y-2 text-sm">
               <li><Link href="/community-guidelines" className="hover:text-white transition-colors">Community Guidelines</Link></li>
-              <li><Link href="/safety-guidelines" className="hover:text-white transition-colors">Safety Guidelines</Link></li>
+              <li><Link href="/safety-center" className="hover:text-white transition-colors">Safety Center</Link></li>
               <li><Link href="/terms-of-service" className="hover:text-white transition-colors">Terms of Service</Link></li>
               <li><Link href="/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
             </ul>
