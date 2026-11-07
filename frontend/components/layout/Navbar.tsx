@@ -60,7 +60,7 @@ export function Navbar() {
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-2.5">
               <img
-                src="/skillswap-logo.svg"
+                src="/skillswap-logo.png"
                 alt="SkillSwap logo"
                 className="h-9 w-9 object-contain drop-shadow-sm"
               />
