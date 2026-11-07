@@ -417,9 +417,28 @@ The exact hosting provider and service configuration can be selected according t
 
 ## Project Status
 
-SkillSwap is an actively developed full-stack application.
+SkillSwap is an actively developed full-stack application using a custom FastAPI authentication flow. The project is intended to use PostgreSQL for persistent application data, with Vercel hosting the Next.js frontend.
 
-The repository contains the frontend and backend structure required to build the platform, while some external-service configuration and end-to-end integration work may still need to be completed.
+### Latest Repository Evidence
+
+Based on the GitHub screenshot reviewed on **November 7, 2026**, the visible commit history for `README.md` on the `main` branch shows:
+
+- **Latest visible README commit:** `d75317e`
+- **Commit message:** `Implement security and notification preferences tests; add NotificationPreferences component`
+- **Displayed commit date:** November 3, 2026
+- **Checks shown:** 1 of 1 passed
+
+This is evidence of the latest commit shown for `README.md` only. It does **not** establish that every recent local change has been pushed to GitHub, because the screenshot shows the history of an individual file rather than the repository-wide commit history.
+
+The following items therefore still need direct verification:
+
+- Check the repository-wide commit history on `main` to identify the latest pushed commit.
+- Compare the latest local commit with `origin/main` using `git status` and `git log`.
+- Confirm that the expected changed files are present in the GitHub repository.
+- In Vercel, verify that the latest **Production** deployment is `Ready`, uses the `main` branch, and references the same commit as GitHub.
+- Test the deployed frontend against the deployed FastAPI backend and configured database.
+
+### Completion Criteria
 
 **Code being present does not automatically mean that a feature is fully verified.**
 
@@ -430,6 +449,8 @@ A feature should be considered complete when:
 3. External services are configured where necessary.
 4. The frontend and backend work together.
 5. The relevant flow has been tested successfully.
+
+A successful frontend build or a successful GitHub commit alone does not prove that the complete production application is working.
 
 For the detailed functional requirements, refer to:
 
