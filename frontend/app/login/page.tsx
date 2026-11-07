@@ -80,7 +80,7 @@ export default function LoginPage() {
             Sign up now
           </Link>
         </p>
-        <p className="auth-legal">By signing in, you agree to our <a href="#terms">Terms of Service</a> and <a href="#privacy">Privacy Policy</a>.</p>
+        <p className="auth-legal">By signing in, you agree to our <Link href="/terms-of-service">Terms of Service</Link> and <Link href="/privacy-policy">Privacy Policy</Link>.</p>
       </div>
     </div>
   );

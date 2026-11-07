@@ -288,7 +288,7 @@ export default function SignUpPage() {
                       className="mt-1 w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                     />
                     <span className="text-xs text-slate-600 leading-relaxed">
-                      I agree to the <span className="text-indigo-600 font-medium">Terms of Service</span> and acknowledge that my email and phone will never be publicly exposed without my consent according to the <span className="text-indigo-600 font-medium">Privacy Policy</span>.
+                      I agree to the <Link href="/terms-of-service" className="text-indigo-600 font-medium hover:text-indigo-800">Terms of Service</Link> and acknowledge that my email and phone will never be publicly exposed without my consent according to the <Link href="/privacy-policy" className="text-indigo-600 font-medium hover:text-indigo-800">Privacy Policy</Link>.
                     </span>
                   </label>
                 </div>
