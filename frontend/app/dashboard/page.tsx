@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { chatService, matchService, notificationService, sessionService, swapService } from "@/services";
-import type { Conversation, LearningSession, MatchResult, SwapRequest } from "@/types";
+import type { Conversation, LearningSession, MatchResult, SkillSwap, SwapRequest } from "@/types";
 
 const defaultAvatar = "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80";
 
@@ -21,6 +21,7 @@ export default function DashboardPage() {
   const [matches, setMatches] = useState<MatchResult[]>([]);
   const [requests, setRequests] = useState<SwapRequest[]>([]);
   const [sessions, setSessions] = useState<LearningSession[]>([]);
+  const [swaps, setSwaps] = useState<SkillSwap[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [unread, setUnread] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -36,12 +37,14 @@ export default function DashboardPage() {
     Promise.allSettled([
       matchService.getMatches(4),
       swapService.getReceivedRequests(),
+      swapService.getMySwaps(),
       sessionService.getSessions(),
       chatService.getConversations(),
       notificationService.getNotifications(),
-    ]).then(([matchResult, requestResult, sessionResult, conversationResult, notificationResult]) => {
+    ]).then(([matchResult, requestResult, swapResult, sessionResult, conversationResult, notificationResult]) => {
       if (matchResult.status === "fulfilled") setMatches(matchResult.value);
       if (requestResult.status === "fulfilled") setRequests(requestResult.value.filter((request) => request.status === "Pending"));
+      if (swapResult.status === "fulfilled") setSwaps(swapResult.value);
       if (sessionResult.status === "fulfilled") setSessions(sessionResult.value.filter((session) => session.status === "Upcoming").slice(0, 2));
       if (conversationResult.status === "fulfilled") setConversations(conversationResult.value.slice(0, 2));
       if (notificationResult.status === "fulfilled") setUnread(notificationResult.value.filter((notification) => !notification.is_read).length);
@@ -57,11 +60,13 @@ export default function DashboardPage() {
     avatar: match.user.avatar_url || defaultAvatar,
     location: [match.user.city, match.user.country].filter(Boolean).join(", "),
     teach: match.teach_matches,
-    learn: match.learn_matches[0] || "A new skill",
+    learn: match.learn_matches[0] || "No learning skill listed",
   }));
   const pendingCount = requests.length;
   const sessionCount = sessions.length;
-  const progress = 0;
+  const progress = swaps.length
+    ? Math.round(swaps.reduce((total, swap) => total + swap.progress_percentage, 0) / swaps.length)
+    : null;
 
   return (
     <div className="dashboard-shell">
@@ -87,10 +92,10 @@ export default function DashboardPage() {
         <div className="dashboard-content">
           <section className="dashboard-welcome"><div><p className="dashboard-kicker">Welcome back,</p><h1>{displayName}!</h1><p>Keep learning. Keep sharing. Keep growing.</p><blockquote>“Small skills create big opportunities.”</blockquote></div><div className="welcome-art"><div className="welcome-orb" /><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=420&q=85" alt="" /></div></section>
 
-          <section className="dashboard-metrics"><Metric icon={Users} value={String(matches.length)} label="Skill Matches" tone="blue" href="/matches" /><Metric icon={Send} value={pendingCount.toString()} label="Pending Requests" tone="pink" href="/requests" /><Metric icon={CalendarDays} value={sessionCount.toString()} label="Upcoming Sessions" tone="green" href="/sessions" /><Metric icon={TrendingUp} value={`${progress}%`} label="Learning Progress" tone="violet" href="/progress" /></section>
+          <section className="dashboard-metrics"><Metric icon={Users} value={String(matches.length)} label="Skill Matches" tone="blue" href="/matches" /><Metric icon={Send} value={pendingCount.toString()} label="Pending Requests" tone="pink" href="/requests" /><Metric icon={CalendarDays} value={sessionCount.toString()} label="Upcoming Sessions" tone="green" href="/sessions" /><Metric icon={TrendingUp} value={progress === null ? "—" : `${progress}%`} label="Learning Progress" tone="violet" href="/progress" /></section>
 
           <div className="dashboard-grid"><section className="dashboard-section recommended"><SectionHeading title="Recommended for You" subtitle="People who match your interests and skills" href="/explore" />{people.length ? <div className="match-grid">{people.map((person) => <article className="match-card" key={person.name}><div className="match-avatar"><img src={person.avatar} alt="" /><button aria-label={`Save ${person.name}`}><Star /></button></div><h3>{person.name}</h3><p className="match-location"><CircleUserRound /> {person.location || "Location not added"}</p><small>Teaches</small><div className="tag-row">{person.teach.slice(0, 2).map((skill) => <span key={skill}>{skill}</span>)}</div><small>Wants to Learn</small><div className="tag-row"><span className="learn-tag">{person.learn}</span></div><Link href="/explore" className="connect-button">Connect</Link></article>)}</div> : <div className="dashboard-empty-state"><p>No matches are available yet. Start exploring profiles to build your network.</p></div>}</section>
-            <aside className="dashboard-right"><ProgressCard progress={progress} /><GoalsCard /></aside></div>
+            <aside className="dashboard-right"><ProgressCard progress={progress} /><GoalsCard swaps={swaps} /></aside></div>
 
           <div className="dashboard-bottom-grid"><section className="dashboard-section"><SectionHeading title="Upcoming Sessions" href="/sessions" />{sessions.length ? <div className="session-list">{sessions.map((session) => <div className="session-row" key={session.id}><div className="session-icon"><BookOpen /></div><div><strong>{session.title}</strong><p>with {session.scheduled_by_name}</p><small><Clock3 /> {new Date(session.date_time).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} · {session.duration_minutes} min</small></div><Link href="/sessions">Join</Link></div>)}</div> : <div className="dashboard-empty-state compact"><p>No upcoming sessions yet.</p></div>}</section><section className="dashboard-section messages"><SectionHeading title="Recent Messages" href="/chat" /><div>{conversations.length ? conversations.map((conversation) => <Link href={`/chat/${conversation.id}`} className="message-row" key={conversation.id}><img src={conversation.partner_avatar || defaultAvatar} alt="" /><span><strong>{conversation.partner_name}</strong><small>{conversation.last_message}</small></span><time>{conversation.last_message_time}</time>{conversation.unread_count > 0 && <b>{conversation.unread_count}</b>}</Link>) : <div className="dashboard-empty-state compact"><p>No recent conversations yet.</p></div>}</div></section></div>
         </div>
@@ -102,7 +107,6 @@ export default function DashboardPage() {
 function DashboardNavLink({ href, icon: Icon, label, badge, active }: { href: string; icon: typeof Home; label: string; badge?: number; active?: boolean }) { return <Link href={href} className={`dashboard-nav-link ${active ? "active" : ""}`}><Icon /><span>{label}</span>{badge ? <b>{badge}</b> : null}</Link>; }
 function Metric({ icon: Icon, value, label, tone, href }: { icon: typeof Users; value: string; label: string; tone: string; href: string }) { return <Link href={href} className={`dashboard-metric ${tone}`}><Icon /><span><strong>{value}</strong><small>{label}</small></span><ChevronRight /></Link>; }
 function SectionHeading({ title, subtitle, href }: { title: string; subtitle?: string; href: string }) { return <div className="section-heading"><div><h2>{title}</h2>{subtitle && <p>{subtitle}</p>}</div><Link href={href}>View all <ArrowRightSmall /></Link></div>; }
-function ProgressCard({ progress }: { progress: number }) { return <section className="dashboard-section progress-card"><SectionHeading title="Your Learning Progress" href="/progress" /><div className="progress-content"><div className="progress-ring" style={{ "--progress": `${progress * 3.6}deg` } as CSSProperties}><span>{progress}%</span></div><div><strong>You&apos;re doing great!</strong><p>Keep going to reach your goals.</p></div></div></section>; }
-function GoalsCard() { return <section className="dashboard-section goals-card"><SectionHeading title="Your Goals" href="/progress" /><Goal label="Learn UI/UX Design" level="Intermediate level" value="40%" width="40%" color="blue" /><Goal label="Improve Public Speaking" level="Track your progress" value="20%" width="20%" color="pink" /><Goal label="Learn Photography" level="Beginner level" value="10%" width="10%" color="violet" /><Link href="/progress" className="add-goal">+ Add a New Goal</Link></section>; }
-function Goal({ label, level, value, width, color }: { label: string; level: string; value: string; width: string; color: string }) { return <div className="goal-row"><div className={`goal-icon ${color}`}><Sparkles /></div><div><strong>{label}</strong><small>{level}</small><div className="goal-bar"><i style={{ width }} /></div></div><b>{value}</b></div>; }
+function ProgressCard({ progress }: { progress: number | null }) { return <section className="dashboard-section progress-card"><SectionHeading title="Learning Progress" href="/progress" /><div className="progress-content"><div className="progress-ring" style={{ "--progress": `${(progress ?? 0) * 3.6}deg` } as CSSProperties}><span>{progress === null ? "—" : `${progress}%`}</span></div><div><strong>{progress === null ? "No active exchanges" : "Progress across your swaps"}</strong><p>{progress === null ? "Accept a skill swap to start tracking learning progress." : "Based on the progress recorded for your skill exchanges."}</p></div></div></section>; }
+function GoalsCard({ swaps }: { swaps: SkillSwap[] }) { const activeSwaps = swaps.filter((swap) => swap.status === "Active"); return <section className="dashboard-section goals-card"><SectionHeading title="Learning Goals" href="/progress" />{activeSwaps.length ? activeSwaps.slice(0, 3).map((swap) => <div className="goal-row" key={swap.id}><div className="goal-icon blue"><Sparkles /></div><div><strong>Learn {swap.i_learn_skill}</strong><small>With {swap.partner_name}</small><div className="goal-bar"><i style={{ width: `${Math.min(Math.max(swap.progress_percentage, 0), 100)}%` }} /></div></div><b>{swap.progress_percentage}%</b></div>) : <div className="dashboard-empty-state compact"><p>Your accepted skill exchanges will appear here with their recorded learning progress.</p></div>}<Link href={activeSwaps[0] ? `/progress?swap_id=${activeSwaps[0].id}` : "/explore"} className="add-goal">{activeSwaps.length ? "View learning progress" : "Explore skills to learn"}</Link></section>; }
 function ArrowRightSmall() { return <ChevronRight className="small-chevron" />; }

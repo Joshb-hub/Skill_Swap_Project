@@ -152,7 +152,7 @@ export default function ProfileDetailPage() {
               </div>
             </div>
             <div className="profile-stats">
-              <div className="profile-rating"><Star /><span><strong>{(profile.rating_average || 5).toFixed(1)}</strong><small>({reviews.length} reviews)</small></span></div>
+              <div className="profile-rating"><Star /><span><strong>{reviews.length ? (profile.rating_average ?? 0).toFixed(1) : "—"}</strong><small>{reviews.length} {reviews.length === 1 ? "review" : "reviews"}</small></span></div>
               {statItems.map(({ icon: Icon, value, label }) => (
                 <div className="profile-stat" key={label}><Icon /><span><strong>{value}</strong><small>{label}</small></span></div>
               ))}

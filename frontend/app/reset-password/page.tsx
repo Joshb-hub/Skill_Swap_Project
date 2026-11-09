@@ -65,7 +65,7 @@ function ResetPasswordPageContent() {
           <CardHeader>
             <CardTitle className="text-lg">Create New Password</CardTitle>
             <CardDescription className="text-xs">
-              Enter your reset token and your new strong password.
+              Enter the one-time token provided by the platform administrator. Tokens expire after one hour. Your new password must be at least eight characters and include an uppercase letter, a lowercase letter, and a number.
             </CardDescription>
           </CardHeader>
 
@@ -97,7 +97,7 @@ function ResetPasswordPageContent() {
                 )}
                 <Input
                   label="Reset Token"
-                  placeholder="Paste token from email"
+                  placeholder="Enter your reset token"
                   required
                   value={token}
                   onChange={(e) => setToken(e.target.value)}

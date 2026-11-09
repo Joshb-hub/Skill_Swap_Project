@@ -45,7 +45,7 @@ export default function ForgotPasswordPage() {
           <CardHeader>
             <CardTitle className="text-lg">Forgot Password</CardTitle>
             <CardDescription className="text-xs">
-              Enter your registered email address to receive secure reset instructions.
+              Enter the email on your account. For privacy, the response does not reveal whether an account exists. Reset email delivery is not configured in this deployment; contact the platform administrator to obtain a reset token.
             </CardDescription>
           </CardHeader>
 
@@ -55,9 +55,9 @@ export default function ForgotPasswordPage() {
                 <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
                   <CheckCircle2 className="w-6 h-6" />
                 </div>
-                <h3 className="text-base font-bold text-slate-900">Instructions Sent</h3>
+                <h3 className="text-base font-bold text-slate-900">Request Received</h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  If your email is registered in SkillSwap, password reset instructions have been generated.
+                  If the account exists, a reset token has been generated. No email was sent by this deployment; contact the platform administrator for the token.
                 </p>
                 <div className="pt-3">
                   <Link href="/login">

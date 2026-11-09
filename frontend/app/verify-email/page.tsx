@@ -75,7 +75,7 @@ function VerifyEmailPageContent() {
           <CardHeader>
             <CardTitle className="text-lg">Confirm Your Account</CardTitle>
             <CardDescription className="text-xs">
-              Verify your email address to ensure community safety and unlock full exchange privileges.
+              Email verification marks the address on your account as verified. Automated token delivery is not configured in this deployment; obtain a verification token from the platform administrator.
             </CardDescription>
           </CardHeader>
 
@@ -104,17 +104,17 @@ function VerifyEmailPageContent() {
 
                 {/* Resend option */}
                 <form onSubmit={handleResend} className="space-y-3 pt-2 border-t border-slate-100">
-                  <p className="text-xs text-slate-600">Need a new verification link?</p>
+                  <p className="text-xs text-slate-600">Requesting a token replaces the previous token. The new token is not emailed in this deployment; ask the platform administrator to provide it.</p>
                   <Input
                     label="Account Email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
+                    placeholder="Enter your account email"
                     required
                   />
                   <Button type="submit" variant="secondary" className="w-full text-xs">
-                    Send New Link
+                    Request New Token
                   </Button>
                   {resendStatus && (
                     <p className="text-xs text-indigo-700 font-medium">{resendStatus}</p>

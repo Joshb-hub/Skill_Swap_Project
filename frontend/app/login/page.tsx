@@ -47,7 +47,7 @@ export default function LoginPage() {
         <div className="auth-benefits">
           {[{ icon: Users, title: "Learn from real people", text: "Gain practical skills from a global community.", color: "mint" }, { icon: Sparkles, title: "Teach what you know", text: "Share your expertise and make a difference.", color: "lilac" }, { icon: Heart, title: "Build meaningful connections", text: "Meet like-minded learners and teachers.", color: "pink" }, { icon: TrendingUpIcon, title: "Track your progress", text: "Set goals, celebrate milestones, and keep growing.", color: "peach" }].map(({ icon: Icon, title, text, color }) => <div className="auth-benefit" key={title}><div className={`auth-benefit-icon ${color}`}><Icon /></div><div><h2>{title}</h2><p>{text}</p></div></div>)}
         </div>
-        <div className="auth-stats"><span><strong>10K+</strong>Learners</span><span><strong>150+</strong>Countries</span><span><strong>500+</strong>Skills</span><span><strong>4.9/5</strong>Community Rating</span></div>
+        <div className="auth-stats"><span><strong>Teach</strong>Share a skill</span><span><strong>Learn</strong>Set a goal</span><span><strong>Exchange</strong>Grow together</span></div>
       </div>
 
       <div className="auth-panel">
@@ -72,7 +72,7 @@ export default function LoginPage() {
           </div>
         </form>
 
-        <div className="secure-callout"><Shield /><div><strong>Secure custom JWT authentication</strong><span>Your account is protected by FastAPI + PostgreSQL, with password hashing and signed access tokens.</span></div></div>
+        <div className="secure-callout"><Shield /><div><strong>Protected sign-in</strong><span>Your password is hashed and your access token is signed by the SkillSwap service.</span></div></div>
         <div className="auth-perks"><span><b><Lock /></b>Secure<br />Authentication</span><span><b><Users /></b>Easy<br />Account Access</span><span><b><Shield /></b>Your Privacy<br />Our Priority</span></div>
         <p className="auth-signup">
           Don't have an account yet?{" "}

@@ -21,90 +21,12 @@ import {
   Youtube,
 } from "lucide-react";
 
-import { LearningProgress, SkillSwap } from "@/types";
-import { progressService, swapService } from "@/services";
+import { LearningProgress, LearningSession, SkillSwap } from "@/types";
+import { progressService, sessionService, swapService } from "@/services";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
-
-const demoMilestones = [
-  {
-    title: "Understand the basics of UI/UX",
-    description: "Learn key terms, principles and design thinking.",
-    date: "Aug 10, 2026",
-    status: "Completed",
-    type: "completed",
-  },
-  {
-    title: "Learn Figma basics",
-    description: "Explore interface, tools and create simple designs.",
-    date: "Aug 28, 2026",
-    status: "Completed",
-    type: "completed",
-  },
-  {
-    title: "Design a complete UI project",
-    description: "Create a full app or website design from scratch.",
-    date: "In Progress",
-    status: "65%",
-    type: "progress",
-  },
-  {
-    title: "Build a portfolio with 3–5 projects",
-    description: "Showcase your best work.",
-    date: "Not Started",
-    status: "Not Started",
-    type: "pending",
-  },
-  {
-    title: "Get feedback from experienced designers",
-    description: "Improve your work through peer review.",
-    date: "Not Started",
-    status: "Not Started",
-    type: "pending",
-  },
-  {
-    title: "Reach intermediate level",
-    description: "Be confident in real-world UI/UX projects.",
-    date: "Not Started",
-    status: "Not Started",
-    type: "pending",
-  },
-];
-
-const demoSessions = [
-  {
-    title: "Figma Basics",
-    date: "Aug 12, 2026 • 5:00 PM",
-    status: "Completed",
-    type: "completed",
-  },
-  {
-    title: "Design Principles",
-    date: "Aug 20, 2026 • 6:00 PM",
-    status: "Completed",
-    type: "completed",
-  },
-  {
-    title: "User Research Basics",
-    date: "Aug 28, 2026 • 5:00 PM",
-    status: "Completed",
-    type: "completed",
-  },
-  {
-    title: "Wireframing & Prototyping",
-    date: "Sep 5, 2026 • 6:00 PM",
-    status: "Attended",
-    type: "attended",
-  },
-  {
-    title: "Designing a Landing Page",
-    date: "Sep 12, 2026 • 5:00 PM",
-    status: "Upcoming",
-    type: "upcoming",
-  },
-];
 
 export default function ProgressDetailPage() {
   return (
@@ -121,9 +43,10 @@ function ProgressDetailPageContent() {
   const progressId = String(params.progressId || "");
   const swapIdParam = searchParams.get("swap_id") || "";
 
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   const [swaps, setSwaps] = useState<SkillSwap[]>([]);
+  const [sessions, setSessions] = useState<LearningSession[]>([]);
   const [progress, setProgress] = useState<LearningProgress | null>(null);
   const [selectedSwapId, setSelectedSwapId] = useState(swapIdParam);
   const [isLoading, setIsLoading] = useState(true);
@@ -140,18 +63,19 @@ function ProgressDetailPageContent() {
 
     try {
       const allSwaps = await swapService.getMySwaps();
+      const allSessions = await sessionService.getSessions();
 
       setSwaps(allSwaps);
+      setSessions(allSessions);
 
       if (swapIdParam) {
         const records = await progressService.getSwapProgress(swapIdParam);
 
         setSelectedSwapId(swapIdParam);
 
-        const matching =
-          records.find((record) => record.id === progressId) ||
-          records[0] ||
-          null;
+        const matching = records.find(
+          (record) => record.user_id === user?.id && (!progressId || record.id === progressId)
+        ) || null;
 
         setProgress(matching);
         return;
@@ -165,7 +89,7 @@ function ProgressDetailPageContent() {
           const records = await progressService.getSwapProgress(swap.id);
 
           const matching = records.find(
-            (record) => record.id === progressId
+            (record) => record.user_id === user?.id && record.id === progressId
           );
 
           if (matching) {
@@ -269,27 +193,31 @@ function ProgressDetailPageContent() {
     (swap) => swap.id === selectedSwapId
   );
 
-  /*
-   * Real data is preferred whenever available.
-   * The fallback values reproduce the reference design until
-   * the account has real learning-goal data.
-   */
   const progressPercentage = Math.min(
-    Math.max(progress?.progress_percentage ?? 65, 0),
+    Math.max(progress?.progress_percentage ?? 0, 0),
     100
   );
 
-  const skillName = progress?.skill_name || "UI/UX Design";
-  const targetLevel = progress?.target_level || "Intermediate";
+  if (!progress) {
+    return (
+      <main className="goal-detail-page">
+        <section className="goal-detail-empty">
+          <TrendingUp />
+          <h1>No learning progress yet</h1>
+          <p>Progress appears here after a skill swap is accepted. Explore members or review your requests to get started.</p>
+          <div className="flex justify-center gap-3">
+            <Link href="/explore"><Button variant="primary">Explore people</Button></Link>
+            <Link href="/requests"><Button variant="outline">View requests</Button></Link>
+          </div>
+        </section>
+      </main>
+    );
+  }
 
-  const partnerName =
-    currentSwap?.partner_name || "Priya Sharma";
-
-  const partnerLocation = "Kolkata, India";
-
-  const milestones =
-    progress && progress.milestones.length > 0
-      ? progress.milestones.map((milestone) => ({
+  const skillName = progress.skill_name;
+  const targetLevel = progress.target_level || "Not set";
+  const currentLevel = progress.current_level || "Not set";
+  const milestones = progress.milestones.map((milestone) => ({
           id: milestone.id,
           title: milestone.title,
           description: milestone.description || "",
@@ -311,11 +239,9 @@ function ProgressDetailPageContent() {
               : milestone.status === "In Progress"
               ? "progress"
               : "pending",
-        }))
-      : demoMilestones.map((milestone, index) => ({
-          ...milestone,
-          id: `demo-${index}`,
         }));
+  const goalSessions = sessions.filter((session) => session.swap_id === progress.swap_id);
+  const completedMilestones = progress.milestones.filter((milestone) => milestone.status === "Completed").length;
 
   return (
     <main className="goal-detail-page">
@@ -341,8 +267,7 @@ function ProgressDetailPageContent() {
                 <h1>Learn {skillName}</h1>
 
                 <p>
-                  Turn ideas into beautiful and user-friendly
-                  digital experiences.
+                  Track your learning activity, milestones, and sessions for this skill exchange.
                 </p>
               </div>
             </div>
@@ -400,7 +325,7 @@ function ProgressDetailPageContent() {
               <div className="goal-progress-details">
                 <div>
                   <span>Current Level</span>
-                  <strong>Beginner</strong>
+                  <strong>{currentLevel}</strong>
                 </div>
 
                 <div>
@@ -409,28 +334,23 @@ function ProgressDetailPageContent() {
                 </div>
 
                 <div>
-                  <span>Start Date</span>
-                  <strong>Aug 1, 2026</strong>
+                  <span>Started</span>
+                  <strong>{currentSwap ? new Date(currentSwap.started_at).toLocaleDateString() : "Not available"}</strong>
                 </div>
 
                 <div>
-                  <span>Target Date</span>
-                  <strong>Dec 31, 2026</strong>
+                  <span>Sessions completed</span>
+                  <strong>{progress.completed_sessions} / {progress.total_sessions}</strong>
                 </div>
 
                 <div>
-                  <span>Time Invested</span>
-                  <strong>12 hours</strong>
+                  <span>Milestones completed</span>
+                  <strong>{completedMilestones} / {progress.milestones.length}</strong>
                 </div>
               </div>
             </div>
 
-            <button
-              type="button"
-              className="goal-primary-button"
-            >
-              Update Progress
-            </button>
+            <Link href={currentSwap?.conversation_id ? `/chat/${currentSwap.conversation_id}` : "/sessions"} className="goal-primary-button">Continue your exchange</Link>
           </article>
 
           {/* SKILL LEVEL JOURNEY */}
@@ -441,105 +361,9 @@ function ProgressDetailPageContent() {
             </div>
 
             <div className="journey-chart">
-              <div className="journey-y-axis">
-                <span>Advanced</span>
-                <span>Intermediate</span>
-                <span>Beginner</span>
-                <span>Novice</span>
-              </div>
-
-              <div className="journey-chart-area">
-                <svg
-                  viewBox="0 0 500 230"
-                  preserveAspectRatio="none"
-                  className="journey-svg"
-                >
-                  <defs>
-                    <linearGradient
-                      id="goalJourneyGradient"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop
-                        offset="0%"
-                        stopColor="#cfc6ff"
-                        stopOpacity="0.65"
-                      />
-
-                      <stop
-                        offset="100%"
-                        stopColor="#f1efff"
-                        stopOpacity="0.25"
-                      />
-                    </linearGradient>
-                  </defs>
-
-                  <path
-                    d="M15 190 L105 165 L195 140 L285 110 L375 90 L475 50 L475 205 L15 205 Z"
-                    fill="url(#goalJourneyGradient)"
-                  />
-
-                  <polyline
-                    points="15,190 105,165 195,140 285,110 375,90 475,50"
-                    fill="none"
-                    stroke="#6950df"
-                    strokeWidth="3"
-                  />
-
-                  {[
-                    [15, 190],
-                    [105, 165],
-                    [195, 140],
-                    [285, 110],
-                    [375, 90],
-                    [475, 50],
-                  ].map(([cx, cy], index) => (
-                    <circle
-                      key={index}
-                      cx={cx}
-                      cy={cy}
-                      r="5"
-                      fill="#6950df"
-                    />
-                  ))}
-
-                  <line
-                    x1="285"
-                    y1="110"
-                    x2="285"
-                    y2="70"
-                    stroke="#6950df"
-                    strokeDasharray="4 4"
-                  />
-                </svg>
-
-                <div className="journey-current">
-                  <span>You are here</span>
-                  <strong>{progressPercentage}%</strong>
-                </div>
-
-                <div className="journey-months">
-                  <span>Aug</span>
-                  <span>Sep</span>
-                  <span>Oct</span>
-                  <span>Nov</span>
-                  <span>Dec</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="journey-legend">
-              <span>
-                <i className="legend-progress" />
-                Your Progress
-              </span>
-
-              <span>
-                <i className="legend-target" />
-                Target Path
-              </span>
+              <p>{completedMilestones} of {progress.milestones.length} milestones complete</p>
+              <p>{progress.completed_sessions} of {progress.total_sessions} sessions complete</p>
+              <p>Progress reflects the latest value recorded for this learning exchange.</p>
             </div>
           </article>
         </section>
@@ -584,8 +408,7 @@ function ProgressDetailPageContent() {
                 const isProgress =
                   milestone.type === "progress";
 
-                const isRealMilestone =
-                  !String(milestone.id).startsWith("demo-");
+                const isRealMilestone = true;
 
                 return (
                   <div
@@ -661,10 +484,10 @@ function ProgressDetailPageContent() {
             </div>
 
             <div className="goal-session-list">
-              {demoSessions.map((session) => (
+              {goalSessions.length ? goalSessions.map((session) => (
                 <div
                   className="goal-session-row"
-                  key={session.title}
+                  key={session.id}
                 >
                   <div className="goal-session-icon">
                     <CalendarDays size={15} />
@@ -672,16 +495,16 @@ function ProgressDetailPageContent() {
 
                   <div className="goal-session-info">
                     <strong>{session.title}</strong>
-                    <span>{session.date}</span>
+                    <span>{new Date(session.date_time).toLocaleString()}</span>
                   </div>
 
                   <span
-                    className={`goal-session-status ${session.type}`}
+                    className={`goal-session-status ${session.status.toLowerCase()}`}
                   >
                     {session.status}
                   </span>
                 </div>
-              ))}
+              )) : <p>No sessions have been scheduled for this skill exchange yet.</p>}
             </div>
 
             <Link
@@ -700,27 +523,22 @@ function ProgressDetailPageContent() {
           <aside className="goal-detail-aside">
             {/* LEARNING PARTNER */}
 
-            <article className="goal-side-card">
+            {currentSwap && <article className="goal-side-card">
               <h2>Learning Partner</h2>
 
               <div className="learning-partner">
                 <div className="partner-avatar">
-                  PS
+                  {currentSwap.partner_name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()}
                 </div>
 
                 <div className="partner-info">
                   <div className="partner-name-row">
-                    <strong>{partnerName}</strong>
+                    <strong>{currentSwap.partner_name}</strong>
 
                     <span className="partner-active">
                       ● Active
                     </span>
                   </div>
-
-                  <span>
-                    <MapPin size={13} />
-                    {partnerLocation}
-                  </span>
 
                   <small>
                     Teaches you: {skillName}
@@ -729,12 +547,12 @@ function ProgressDetailPageContent() {
               </div>
 
               <Link
-                href="/profile/priya-sharma"
+                href={`/profile/${currentSwap.partner_username}`}
                 className="goal-outline-button"
               >
                 View Profile
               </Link>
-            </article>
+              </article>}
 
             {/* GOAL TIMELINE */}
 
@@ -749,8 +567,8 @@ function ProgressDetailPageContent() {
                   <CalendarDays size={15} />
 
                   <span>
-                    Aug 1, 2026 – Dec 31, 2026
-                    <strong>4 months left</strong>
+                    {currentSwap ? `Started ${new Date(currentSwap.started_at).toLocaleDateString()}` : "Start date unavailable"}
+                    <strong>{progress.completed_sessions} of {progress.total_sessions} sessions complete</strong>
                   </span>
                 </div>
 
@@ -787,95 +605,8 @@ function ProgressDetailPageContent() {
                 Resources
               </h2>
 
-              <div className="resource-list">
-                <a
-                  href="#"
-                  onClick={(event) =>
-                    event.preventDefault()
-                  }
-                >
-                  <div>
-                    <span className="resource-icon">
-                      <BookOpen size={14} />
-                    </span>
-
-                    <span>
-                      Figma Official Guide
-                    </span>
-                  </div>
-
-                  <ExternalLink size={14} />
-                </a>
-
-                <a
-                  href="#"
-                  onClick={(event) =>
-                    event.preventDefault()
-                  }
-                >
-                  <div>
-                    <span className="resource-icon pdf">
-                      <FileText size={14} />
-                    </span>
-
-                    <span>
-                      UI/UX Best Practices
-                      <small>PDF</small>
-                    </span>
-                  </div>
-
-                  <ExternalLink size={14} />
-                </a>
-
-                <a
-                  href="#"
-                  onClick={(event) =>
-                    event.preventDefault()
-                  }
-                >
-                  <div>
-                    <span className="resource-icon">
-                      <BookOpen size={14} />
-                    </span>
-
-                    <span>
-                      Inspiring UI Portfolios
-                      <small>
-                        External Link
-                      </small>
-                    </span>
-                  </div>
-
-                  <ExternalLink size={14} />
-                </a>
-
-                <a
-                  href="#"
-                  onClick={(event) =>
-                    event.preventDefault()
-                  }
-                >
-                  <div>
-                    <span className="resource-icon youtube">
-                      <Youtube size={14} />
-                    </span>
-
-                    <span>
-                      Design Thinking Basics
-                      <small>YouTube</small>
-                    </span>
-                  </div>
-
-                  <ExternalLink size={14} />
-                </a>
-              </div>
-
-              <button
-                type="button"
-                className="goal-outline-button"
-              >
-                + Add Resource
-              </button>
+              <p className="text-sm leading-6 text-slate-600">No resources are attached to this progress record. Share links and materials with your partner in the exchange chat.</p>
+              {currentSwap?.conversation_id && <Link href={`/chat/${currentSwap.conversation_id}`} className="goal-outline-button">Open exchange chat <ArrowRight size={14} /></Link>}
             </article>
           </aside>
         </section>
