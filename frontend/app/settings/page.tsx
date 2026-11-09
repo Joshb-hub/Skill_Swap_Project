@@ -501,9 +501,9 @@ export default function SettingsPage() {
               subtitle="If you face any issues or feel unsafe, we're here to help."
               icon={CircleHelp}
             />
-            <a className="privacy-help-button" href="mailto:support@skillswap.example">
-              <Mail size={17} /> Contact Support
-            </a>
+            <Link className="privacy-help-button" href="/faqs#support">
+              <Mail size={17} /> Support Information
+            </Link>
             <button
               type="button"
               className="privacy-report-button"
@@ -512,7 +512,7 @@ export default function SettingsPage() {
               <Flag size={16} /> Report a User
             </button>
             <p className="privacy-unavailable-note">
-              Replace the example support email with your real support address before launch.
+              Find current support and account-recovery information in the FAQs.
             </p>
           </section>
         </aside>
@@ -606,7 +606,7 @@ export default function SettingsPage() {
         <section className="settings-center-panel">
           <PanelHeading title="Help & Support" subtitle="Find help with your account or skill exchanges." icon={CircleHelp} />
           <Link className="settings-inline-link" href="/faqs">Frequently asked questions <ChevronRight /></Link>
-          <a className="settings-inline-link" href="mailto:support@skillswap.example">Contact support <ChevronRight /></a>
+          <Link className="settings-inline-link" href="/faqs#support">Support information <ChevronRight /></Link>
         </section>
       );
     }

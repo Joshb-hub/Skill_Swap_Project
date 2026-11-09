@@ -23,7 +23,7 @@ const responseSteps = [
   "Stop engaging if a person is pressuring you, making you uncomfortable, or acting in a way that feels unsafe.",
   "Do not share private personal details, financial information, or sensitive identifiers unless you are ready and comfortable.",
   "Capture the relevant message history or profile details in case you need to report the behavior.",
-  "Use the report function on SkillSwap and contact support if the issue is serious, repeated, or threatening.",
+  "Use the report action in the Reviews flow when available. For other incidents, contact the person operating this SkillSwap instance.",
   "If you are in immediate danger or feel threatened, contact local emergency services or a trusted person immediately.",
 ];
 
@@ -70,10 +70,10 @@ export default function SafetyCenterPage() {
         <section className="mt-10">
           <h2 className="text-2xl font-semibold text-slate-900">Reporting and moderation</h2>
           <p className="mt-3 text-sm leading-6 text-slate-700">
-            Reports help us protect the community from harassment, abusive behavior, scams, suspicious account activity, and misuse of trust. We review reports seriously and may take action such as warnings, content removal, temporary restrictions, or permanent removal when a member’s behavior violates our standards.
+            Reports submitted through the current app are stored for the SkillSwap instance operator. This deployment does not include an in-app moderation queue or response-time commitment; the operator is responsible for reviewing reports and deciding whether further action is appropriate.
           </p>
           <p className="mt-3 text-sm leading-6 text-slate-700">
-            Everyone deserves to participate in a community that feels fair, respectful, and safe. By acting early and reporting issues clearly, you help keep SkillSwap helpful and welcoming for genuine learners, teachers, and collaborators.
+            The report form is currently available from the Reviews flow after an exchange. If you cannot access it or need urgent help, contact the instance operator through the support channel they provide. If you are in immediate danger, contact local emergency services.
           </p>
         </section>
 

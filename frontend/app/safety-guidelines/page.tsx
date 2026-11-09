@@ -31,7 +31,7 @@ const responsePlan = [
   "Stop communication and do not continue the exchange if you feel pressured or unsafe.",
   "Avoid sharing private contact details or personal information beyond what is necessary and appropriate.",
   "Document the relevant messages or profile details to support a report if needed.",
-  "Use the report function in the platform and contact support if the issue is serious.",
+  "Use the report action in the Reviews flow when available. For other incidents, contact the person operating this SkillSwap instance.",
   "If you are in immediate danger, contact local emergency services or a trusted person right away.",
 ];
 
@@ -81,7 +81,7 @@ export default function SafetyGuidelinesPage() {
         <section className="mt-10">
           <h2 className="text-2xl font-semibold text-slate-900">Reporting and support</h2>
           <p className="mt-3 text-sm leading-6 text-slate-700">
-            Use the reporting tools inside the platform whenever you encounter harassment, suspicious account activity, scams, or inappropriate messages. Reports are reviewed to help keep the community safe. In serious cases, we may restrict access, temporarily disable an account, or permanently remove abusive or unsafe users.
+            The report action is currently available from the Reviews flow after an exchange. Submitted reports are stored for the SkillSwap instance operator; this deployment does not include an in-app moderation queue or response-time commitment. Contact the operator through the support channel they provide for incidents the form cannot cover.
           </p>
         </section>
 

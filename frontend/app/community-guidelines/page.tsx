@@ -23,7 +23,7 @@ const principles = [
   },
   {
     title: "Report problems early",
-    text: "If you see harassment, suspicious behavior, scams, policy violations, or threatening interactions, report them as soon as possible. Timely reporting helps us act quickly and protect the wider community.",
+    text: "If you see harassment, suspicious behavior, scams, policy violations, or threatening interactions, use the report action when it is available and preserve relevant details. The current report form is available from the Reviews flow after an exchange; for other incidents, contact the person operating this SkillSwap instance.",
   },
 ];
 
@@ -82,10 +82,10 @@ export default function CommunityGuidelinesPage() {
         <section className="mt-10 rounded-2xl bg-slate-50 p-6">
           <h2 className="text-2xl font-semibold text-slate-900">Moderation and reporting</h2>
           <p className="mt-3 text-sm leading-6 text-slate-700">
-            We review reports and may take action when a profile, message, session, or pattern of behavior violates these community standards. This can include warnings, content removal, temporary restrictions, or account removal when necessary to protect the community.
+            Reports submitted through the current app are stored for the SkillSwap instance operator. This deployment does not include an in-app moderation queue or response-time commitment; the operator is responsible for reviewing reports and deciding whether further action is appropriate.
           </p>
           <p className="mt-3 text-sm leading-6 text-slate-700">
-            If something feels unsafe, manipulative, or inappropriate, please report it early. The goal is not to punish users casually, but to protect trust, identify harmful behavior, and keep SkillSwap useful for people who are genuinely trying to learn and teach.
+            If something feels unsafe, manipulative, or inappropriate, document what happened and use the available report action. If that action does not fit the incident, contact the instance operator using the support channel they provide.
           </p>
         </section>
 

@@ -35,7 +35,7 @@ const sections = [
   },
   {
     title: "9. Moderation, restrictions, and account actions",
-    text: "SkillSwap may review reports, remove or restrict content, suspend a user’s access, or terminate an account when necessary to protect the platform, other members, or the integrity of the community. We may also limit features if a user repeatedly violates policies or creates unreasonable risk to the skill-sharing environment.",
+    text: "Reports submitted through the current app are stored for the SkillSwap instance operator. This deployment does not include an in-app moderation queue or response-time commitment. The operator is responsible for reviewing reports and deciding what action, if any, is appropriate under these terms and applicable law.",
   },
   {
     title: "10. Service availability and changes",

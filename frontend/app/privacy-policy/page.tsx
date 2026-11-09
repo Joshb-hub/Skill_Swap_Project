@@ -31,7 +31,7 @@ const sections = [
   },
   {
     title: "8. Your rights and choices",
-    text: "You can update your profile and privacy preferences from your account settings, manage your notification choices, and control what information is visible to others. If you need help reviewing, correcting, limiting, or deleting personal data, you can contact support through the platform and we will guide you through the appropriate steps within the limits of the service and applicable law.",
+    text: "You can update your profile and privacy preferences from your account settings, manage your notification choices, and control what information is visible to others. For help reviewing, correcting, limiting, or deleting personal data, contact the person operating this SkillSwap instance; this deployment does not have a configured in-app support inbox.",
   },
   {
     title: "9. Children, vulnerable users, and sensitive contexts",
@@ -39,7 +39,7 @@ const sections = [
   },
   {
     title: "10. Contact and policy updates",
-    text: "If you have questions about how your data is used, how to manage your account privacy, or how to exercise your rights, contact the support team through the platform. We may update this Privacy Policy from time to time to reflect legal changes, product improvements, and evolving security practices. Continued use of the platform after a change is posted means you accept the revised policy.",
+    text: "If you have questions about how your data is used, how to manage your account privacy, or how to exercise your rights, contact the person operating this SkillSwap instance through the support channel they provide. We may update this Privacy Policy from time to time to reflect legal changes, product improvements, and evolving security practices. The current policy version is recorded when a member accepts the Terms of Service during registration.",
   },
 ];
 
@@ -65,7 +65,7 @@ export default function PrivacyPolicyPage() {
         <div className="mt-10 rounded-2xl bg-emerald-50 p-6">
           <h2 className="text-xl font-semibold text-slate-900">Security and accountability</h2>
           <p className="mt-2 text-sm leading-6 text-slate-700">
-            We are committed to maintaining a secure service and protecting member information from misuse, unauthorized access, and unnecessary exposure. If you believe your account or data has been compromised, contact support immediately so we can investigate and help mitigate risk.
+            SkillSwap applies server-side privacy checks and account access controls. If you believe your account or data has been compromised, secure your credentials and contact the person operating this instance through their published support channel. No in-app support inbox is configured here.
           </p>
         </div>
 
